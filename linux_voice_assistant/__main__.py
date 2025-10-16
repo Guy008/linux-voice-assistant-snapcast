@@ -99,6 +99,11 @@ async def main() -> None:
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO)
     _LOGGER.debug(args)
 
+    try:
+        args.audio_input_device = int(args.audio_input_device)
+    except ValueError:
+        pass
+
     # Load available wake words
     wake_word_dirs = [Path(ww_dir) for ww_dir in args.wake_word_dir]
     available_wake_words: Dict[str, AvailableWakeWord] = {}
