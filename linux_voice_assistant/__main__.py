@@ -7,15 +7,15 @@ import threading
 import time
 from pathlib import Path
 from queue import Queue
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Set, Union
 
 import numpy as np
 import sounddevice as sd
+from pymicro_wakeword import MicroWakeWord, MicroWakeWordFeatures
+from pyopen_wakeword import OpenWakeWord, OpenWakeWordFeatures
 
-from .microwakeword import MicroWakeWord, MicroWakeWordFeatures
 from .models import AvailableWakeWord, Preferences, ServerState, WakeWordType
 from .mpv_player import MpvMediaPlayer
-from .openwakeword import OpenWakeWord, OpenWakeWordFeatures
 from .satellite import VoiceSatelliteProtocol
 from .util import get_mac, is_arm
 from .zeroconf import HomeAssistantZeroconf
@@ -64,17 +64,6 @@ async def main() -> None:
     )
     #
     parser.add_argument(
-        "--oww-melspectrogram-model",
-        default=_OWW_DIR / "melspectrogram.tflite",
-        help="Path to openWakeWord melspectrogram model",
-    )
-    parser.add_argument(
-        "--oww-embedding-model",
-        default=_OWW_DIR / "embedding_model.tflite",
-        help="Path to openWakeWord embedding model",
-    )
-    #
-    parser.add_argument(
         "--wakeup-sound", default=str(_SOUNDS_DIR / "wake_word_triggered.flac")
     )
     parser.add_argument(
@@ -117,13 +106,18 @@ async def main() -> None:
 
             with open(model_config_path, "r", encoding="utf-8") as model_config_file:
                 model_config = json.load(model_config_file)
-                model_type = model_config["type"]
+                model_type = WakeWordType(model_config["type"])
+                if model_type == WakeWordType.OPEN_WAKE_WORD:
+                    wake_word_path = model_config_path.parent / model_config["model"]
+                else:
+                    wake_word_path = model_config_path
+
                 available_wake_words[model_id] = AvailableWakeWord(
                     id=model_id,
                     type=WakeWordType(model_type),
                     wake_word=model_config["wake_word"],
                     trained_languages=model_config.get("trained_languages", []),
-                    config_path=model_config_path,
+                    wake_word_path=wake_word_path,
                 )
 
     _LOGGER.debug("Available wake words: %s", list(sorted(available_wake_words.keys())))
@@ -138,10 +132,8 @@ async def main() -> None:
     else:
         preferences = Preferences()
 
-    libtensorflowlite_c_path = _LIB_DIR / "libtensorflowlite_c.so"
-    _LOGGER.debug("libtensorflowlite_c path: %s", libtensorflowlite_c_path)
-
     # Load wake/stop models
+    active_wake_words: Set[str] = set()
     wake_models: Dict[str, Union[MicroWakeWord, OpenWakeWord]] = {}
     if preferences.active_wake_words:
         # Load preferred models
@@ -152,7 +144,8 @@ async def main() -> None:
                 continue
 
             _LOGGER.debug("Loading wake model: %s", wake_word_id)
-            wake_models[wake_word_id] = wake_word.load(libtensorflowlite_c_path)
+            wake_models[wake_word_id] = wake_word.load()
+            active_wake_words.add(wake_word_id)
 
     if not wake_models:
         # Load default model
@@ -160,7 +153,8 @@ async def main() -> None:
         wake_word = available_wake_words[wake_word_id]
 
         _LOGGER.debug("Loading wake model: %s", wake_word_id)
-        wake_models[wake_word_id] = wake_word.load(libtensorflowlite_c_path)
+        wake_models[wake_word_id] = wake_word.load()
+        active_wake_words.add(wake_word_id)
 
     # TODO: allow openWakeWord for "stop"
     stop_model: Optional[MicroWakeWord] = None
@@ -170,9 +164,7 @@ async def main() -> None:
             continue
 
         _LOGGER.debug("Loading stop model: %s", stop_config_path)
-        stop_model = MicroWakeWord.from_config(
-            stop_config_path, libtensorflowlite_c_path
-        )
+        stop_model = MicroWakeWord.from_config(stop_config_path)
         break
 
     assert stop_model is not None
@@ -184,6 +176,7 @@ async def main() -> None:
         entities=[],
         available_wake_words=available_wake_words,
         wake_words=wake_models,
+        active_wake_words=active_wake_words,
         stop_word=stop_model,
         music_player=MpvMediaPlayer(device=args.audio_output_device),
         tts_player=MpvMediaPlayer(device=args.audio_output_device),
@@ -191,9 +184,6 @@ async def main() -> None:
         timer_finished_sound=args.timer_finished_sound,
         preferences=preferences,
         preferences_path=preferences_path,
-        libtensorflowlite_c_path=libtensorflowlite_c_path,
-        oww_melspectrogram_path=Path(args.oww_melspectrogram_model),
-        oww_embedding_path=Path(args.oww_embedding_model),
         refractory_seconds=args.refractory_seconds,
     )
 
@@ -264,7 +254,11 @@ def process_audio(state: ServerState):
             if (not wake_words) or (state.wake_words_changed and state.wake_words):
                 # Update list of wake word models to process
                 state.wake_words_changed = False
-                wake_words = [ww for ww in state.wake_words.values() if ww.is_active]
+                wake_words = [
+                    ww
+                    for ww in state.wake_words.values()
+                    if ww.id in state.active_wake_words
+                ]
 
                 has_oww = False
                 for wake_word in wake_words:
@@ -272,16 +266,10 @@ def process_audio(state: ServerState):
                         has_oww = True
 
                 if micro_features is None:
-                    micro_features = MicroWakeWordFeatures(
-                        libtensorflowlite_c_path=state.libtensorflowlite_c_path,
-                    )
+                    micro_features = MicroWakeWordFeatures()
 
                 if has_oww and (oww_features is None):
-                    oww_features = OpenWakeWordFeatures(
-                        melspectrogram_model=state.oww_melspectrogram_path,
-                        embedding_model=state.oww_embedding_path,
-                        libtensorflowlite_c_path=state.libtensorflowlite_c_path,
-                    )
+                    oww_features = OpenWakeWordFeatures.from_builtin()
 
             try:
                 state.satellite.handle_audio(audio_chunk)
@@ -322,7 +310,7 @@ def process_audio(state: ServerState):
                     if state.stop_word.process_streaming(micro_input):
                         stopped = True
 
-                if stopped and state.stop_word.is_active:
+                if stopped and (state.stop_word.id in state.active_wake_words):
                     state.satellite.stop()
             except Exception:
                 _LOGGER.exception("Unexpected error handling audio")
