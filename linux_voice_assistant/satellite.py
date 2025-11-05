@@ -36,7 +36,6 @@ from pyopen_wakeword import OpenWakeWord
 from .api_server import APIServer
 from .entity import MediaPlayerEntity
 from .entity import MediaPlayerEntity, ThinkingSoundEntity
-from .microwakeword import MicroWakeWord
 from .models import ServerState
 from .util import call_all
 
