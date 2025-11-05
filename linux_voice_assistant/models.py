@@ -14,7 +14,6 @@ if TYPE_CHECKING:
 
     from .entity import ESPHomeEntity, MediaPlayerEntity
     from .entity import ESPHomeEntity, MediaPlayerEntity, ThinkingSoundEntity
-    from .microwakeword import MicroWakeWord
     from .mpv_player import MpvMediaPlayer
     from .satellite import VoiceSatelliteProtocol
 
