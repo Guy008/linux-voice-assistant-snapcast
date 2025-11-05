@@ -13,6 +13,8 @@ if TYPE_CHECKING:
     from pyopen_wakeword import OpenWakeWord
 
     from .entity import ESPHomeEntity, MediaPlayerEntity
+    from .entity import ESPHomeEntity, MediaPlayerEntity, ThinkingSoundEntity
+    from .microwakeword import MicroWakeWord
     from .mpv_player import MpvMediaPlayer
     from .satellite import VoiceSatelliteProtocol
 
@@ -52,7 +54,7 @@ class AvailableWakeWord:
 @dataclass
 class Preferences:
     active_wake_words: List[str] = field(default_factory=list)
-
+    thinking_sound: int = 0  # 0 = disabled, 1 = enabled
 
 @dataclass
 class ServerState:
@@ -74,8 +76,10 @@ class ServerState:
 
     media_player_entity: "Optional[MediaPlayerEntity]" = None
     satellite: "Optional[VoiceSatelliteProtocol]" = None
+    thinking_sound_entity: "Optional[ThinkingSoundEntity]" = None
     wake_words_changed: bool = False
     refractory_seconds: float = 2.0
+    thinking_sound_enabled: bool = False
 
     def save_preferences(self) -> None:
         """Save preferences as JSON."""
