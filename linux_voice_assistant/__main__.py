@@ -92,7 +92,7 @@ async def main() -> None:
         "--port", type=int, default=6053, help="Port for ESPHome server (default: 6053)"
     )
     parser.add_argument(
-        "--thinking-sound", action="store_true", help="Enable thinking sound on startup"
+        "--enable-thinking-sound", action="store_true", help="Enable thinking sound on startup"
     )    
     parser.add_argument(
         "--debug", action="store_true", help="Print DEBUG messages to console"
