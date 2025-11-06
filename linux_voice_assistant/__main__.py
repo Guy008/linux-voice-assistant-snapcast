@@ -92,6 +92,9 @@ async def main() -> None:
         "--port", type=int, default=6053, help="Port for ESPHome server (default: 6053)"
     )
     parser.add_argument(
+        "--thinking-sound", action="store_true", help="Enable thinking sound on startup"
+    )    
+    parser.add_argument(
         "--debug", action="store_true", help="Print DEBUG messages to console"
     )
     args = parser.parse_args()
@@ -167,6 +170,9 @@ async def main() -> None:
     else:
         preferences = Preferences()
 
+    if args.enable_thinking_sound:
+        preferences.thinking_sound = 1
+
     # Load wake/stop models
     active_wake_words: Set[str] = set()
     wake_models: Dict[str, Union[MicroWakeWord, OpenWakeWord]] = {}
@@ -222,6 +228,9 @@ async def main() -> None:
         preferences_path=preferences_path,
         refractory_seconds=args.refractory_seconds,
     )
+
+    if args.enable_thinking_sound:
+        state.save_preferences() 
 
     process_audio_thread = threading.Thread(
         target=process_audio,
