@@ -1,9 +1,14 @@
 """Voice satellite protocol."""
 
+import hashlib
 import logging
+import posixpath
+import shutil
 import time
 from collections.abc import Iterable
 from typing import Dict, Optional, Set, Union
+from urllib.parse import urlparse, urlunparse
+from urllib.request import urlopen
 
 # pylint: disable=no-name-in-module
 from aioesphomeapi.api_pb2 import (  # type: ignore[attr-defined]
@@ -19,6 +24,7 @@ from aioesphomeapi.api_pb2 import (  # type: ignore[attr-defined]
     VoiceAssistantConfigurationRequest,
     VoiceAssistantConfigurationResponse,
     VoiceAssistantEventResponse,
+    VoiceAssistantExternalWakeWord,
     VoiceAssistantRequest,
     VoiceAssistantSetConfiguration,
     VoiceAssistantTimerEventResponse,
@@ -35,7 +41,7 @@ from pyopen_wakeword import OpenWakeWord
 
 from .api_server import APIServer
 from .entity import MediaPlayerEntity
-from .models import ServerState
+from .models import AvailableWakeWord, ServerState, WakeWordType
 from .util import call_all
 
 _LOGGER = logging.getLogger(__name__)
@@ -65,6 +71,7 @@ class VoiceSatelliteProtocol(APIServer):
         self._tts_played = False
         self._continue_conversation = False
         self._timer_finished = False
+        self._external_wake_words: Dict[str, VoiceAssistantExternalWakeWord] = {}
 
     def handle_voice_event(
         self, event_type: VoiceAssistantEventType, data: Dict[str, str]
@@ -167,15 +174,31 @@ class VoiceSatelliteProtocol(APIServer):
             if isinstance(msg, ListEntitiesRequest):
                 yield ListEntitiesDoneResponse()
         elif isinstance(msg, VoiceAssistantConfigurationRequest):
-            yield VoiceAssistantConfigurationResponse(
-                available_wake_words=[
+            available_wake_words = [
+                VoiceAssistantWakeWord(
+                    id=ww.id,
+                    wake_word=ww.wake_word,
+                    trained_languages=ww.trained_languages,
+                )
+                for ww in self.state.available_wake_words.values()
+            ]
+
+            for eww in msg.external_wake_words:
+                if eww.model_type != "micro":
+                    continue
+
+                available_wake_words.append(
                     VoiceAssistantWakeWord(
-                        id=ww.id,
-                        wake_word=ww.wake_word,
-                        trained_languages=ww.trained_languages,
+                        id=eww.id,
+                        wake_word=eww.wake_word,
+                        trained_languages=eww.trained_languages,
                     )
-                    for ww in self.state.available_wake_words.values()
-                ],
+                )
+
+                self._external_wake_words[eww.id] = eww
+
+            yield VoiceAssistantConfigurationResponse(
+                available_wake_words=available_wake_words,
                 active_wake_words=[
                     ww.id
                     for ww in self.state.wake_words.values()
@@ -196,7 +219,16 @@ class VoiceSatelliteProtocol(APIServer):
 
                 model_info = self.state.available_wake_words.get(wake_word_id)
                 if not model_info:
-                    continue
+                    # Check external wake words (may require download)
+                    external_wake_word = self._external_wake_words.get(wake_word_id)
+                    if not external_wake_word:
+                        continue
+
+                    model_info = self._download_external_wake_word(external_wake_word)
+                    if not model_info:
+                        continue
+
+                    self.state.available_wake_words[wake_word_id] = model_info
 
                 _LOGGER.debug("Loading wake word: %s", model_info.wake_word_path)
                 self.state.wake_words[wake_word_id] = model_info.load()
@@ -293,3 +325,70 @@ class VoiceSatelliteProtocol(APIServer):
     def connection_lost(self, exc):
         super().connection_lost(exc)
         _LOGGER.info("Disconnected from Home Assistant")
+
+    def _download_external_wake_word(
+        self, external_wake_word: VoiceAssistantExternalWakeWord
+    ) -> Optional[AvailableWakeWord]:
+        eww_dir = self.state.download_dir / "external_wake_words"
+        eww_dir.mkdir(parents=True, exist_ok=True)
+
+        config_path = eww_dir / f"{external_wake_word.id}.json"
+        should_download_config = not config_path.exists()
+
+        # Check if we need to download the model file
+        model_path = eww_dir / f"{external_wake_word.id}.tflite"
+        should_download_model = True
+        if model_path.exists():
+            model_size = model_path.stat().st_size
+            if model_size == external_wake_word.model_size:
+                with open(model_path, "rb") as model_file:
+                    model_hash = hashlib.sha256(model_file.read()).hexdigest()
+
+                if model_hash == external_wake_word.model_hash:
+                    should_download_model = False
+                    _LOGGER.debug(
+                        "Model size and hash match for %s. Skipping download.",
+                        external_wake_word.id,
+                    )
+
+        if should_download_config or should_download_model:
+            # Download config
+            _LOGGER.debug("Downloading %s to %s", external_wake_word.url, config_path)
+            with urlopen(external_wake_word.url) as request:
+                if request.status != 200:
+                    _LOGGER.warning(
+                        "Failed to download: %s, status=%s",
+                        external_wake_word.url,
+                        request.status,
+                    )
+                    return None
+
+                with open(config_path, "wb") as model_file:
+                    shutil.copyfileobj(request, model_file)
+
+        if should_download_model:
+            # Download model file
+            parsed_url = urlparse(external_wake_word.url)
+            parsed_url = parsed_url._replace(
+                path=posixpath.join(posixpath.dirname(parsed_url.path), model_path.name)
+            )
+            model_url = urlunparse(parsed_url)
+
+            _LOGGER.debug("Downloading %s to %s", model_url, model_path)
+            with urlopen(model_url) as request:
+                if request.status != 200:
+                    _LOGGER.warning(
+                        "Failed to download: %s, status=%s", model_url, request.status
+                    )
+                    return None
+
+                with open(model_path, "wb") as model_file:
+                    shutil.copyfileobj(request, model_file)
+
+        return AvailableWakeWord(
+            id=external_wake_word.id,
+            type=WakeWordType.MICRO_WAKE_WORD,
+            wake_word=external_wake_word.wake_word,
+            trained_languages=external_wake_word.trained_languages,
+            wake_word_path=config_path,
+        )
