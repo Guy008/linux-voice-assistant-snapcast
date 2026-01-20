@@ -149,6 +149,7 @@ class MediaPlayerEntity(ESPHomeEntity):
                 key=self.key,
                 name=self.name,
                 supports_pause=True,
+                feature_flags=SUPPORTED_MEDIA_PLAYER_FEATURES,
             )
         elif isinstance(msg, SubscribeHomeAssistantStatesRequest):
             yield self._get_state_message()
@@ -189,10 +190,6 @@ class MuteSwitchEntity(ESPHomeEntity):
     def update_get_muted(self, get_muted: Callable[[], bool]) -> None:
         # Update the callback used to read the mute state.
         self._get_muted = get_muted
-
-    def update_set_muted(self, set_muted: Callable[[bool], None]) -> None:
-        # Update the callback used to change the mute state.
-        self._set_muted = set_muted
 
     def sync_with_state(self) -> None:
         # Sync internal switch state with the actual mute state.
