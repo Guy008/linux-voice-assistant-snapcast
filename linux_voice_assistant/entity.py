@@ -25,6 +25,15 @@ from .api_server import APIServer
 from .mpv_player import MpvMediaPlayer
 from .util import call_all
 
+SUPPORTED_MEDIA_PLAYER_FEATURES = (
+    MediaPlayerEntityFeature.PLAY
+    | MediaPlayerEntityFeature.PAUSE
+    | MediaPlayerEntityFeature.STOP
+    | MediaPlayerEntityFeature.PLAY_MEDIA
+    | MediaPlayerEntityFeature.VOLUME_SET
+    | MediaPlayerEntityFeature.VOLUME_MUTE
+    | MediaPlayerEntityFeature.MEDIA_ANNOUNCE
+)
 
 class ESPHomeEntity:
     def __init__(self, server: APIServer) -> None:
@@ -56,6 +65,7 @@ class MediaPlayerEntity(ESPHomeEntity):
         self.state = MediaPlayerState.IDLE
         self.volume = 1.0
         self.muted = False
+        self.previous_volume = 1.0
         self.music_player = music_player
         self.announce_player = announce_player
 
@@ -112,6 +122,21 @@ class MediaPlayerEntity(ESPHomeEntity):
                 elif msg.command == MediaPlayerCommand.PLAY:
                     self.music_player.resume()
                     yield self._update_state(MediaPlayerState.PLAYING)
+                elif command == MediaPlayerCommand.MUTE:
+                    if not self.muted:
+                        self.previous_volume = self.volume
+                        self.volume = 0
+                        self.music_player.set_volume(0)
+                        self.announce_player.set_volume(0)
+                        self.muted = True
+                    yield self._update_state(self.state)
+                elif command == MediaPlayerCommand.UNMUTE:
+                    if self.muted:
+                        self.volume = self.previous_volume
+                        self.music_player.set_volume(int(self.volume * 100))
+                        self.announce_player.set_volume(int(self.volume * 100))
+                        self.muted = False
+                    yield self._update_state(self.state)                    
             elif msg.has_volume:
                 volume = int(msg.volume * 100)
                 self.music_player.set_volume(volume)
