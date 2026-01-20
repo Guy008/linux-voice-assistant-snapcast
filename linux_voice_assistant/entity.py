@@ -142,6 +142,58 @@ class MediaPlayerEntity(ESPHomeEntity):
 
 # -----------------------------------------------------------------------------
 
+class MuteSwitchEntity(ESPHomeEntity):
+    def __init__(
+        self,
+        server: APIServer,
+        key: int,
+        name: str,
+        object_id: str,
+        get_muted: Callable[[], bool],
+        set_muted: Callable[[bool], None],
+    ) -> None:
+        ESPHomeEntity.__init__(self, server)
+
+        self.key = key
+        self.name = name
+        self.object_id = object_id
+        self._get_muted = get_muted
+        self._set_muted = set_muted
+        self._switch_state = self._get_muted()  # Sync internal state with actual muted value on init
+
+    def update_get_muted(self, get_muted: Callable[[], bool]) -> None:
+        # Update the callback used to read the mute state.
+        self._get_muted = get_muted
+
+    def update_set_muted(self, set_muted: Callable[[bool], None]) -> None:
+        # Update the callback used to change the mute state.
+        self._set_muted = set_muted
+
+    def sync_with_state(self) -> None:
+        # Sync internal switch state with the actual mute state.
+        self._switch_state = self._get_muted()
+
+    def handle_message(self, msg: message.Message) -> Iterable[message.Message]:
+        if isinstance(msg, SwitchCommandRequest) and (msg.key == self.key):
+            # User toggled the switch - update our internal state and trigger actions
+            new_state = bool(msg.state)
+            self._switch_state = new_state
+            self._set_muted(new_state)
+            # Return the new state immediately
+            yield SwitchStateResponse(key=self.key, state=self._switch_state)
+        elif isinstance(msg, ListEntitiesRequest):
+            yield ListEntitiesSwitchResponse(
+                object_id=self.object_id,
+                key=self.key,
+                name=self.name,
+                entity_category=EntityCategory.CONFIG,
+                icon="mdi:microphone-off",
+            )
+        elif isinstance(msg, SubscribeHomeAssistantStatesRequest):
+            # Always return our internal switch state
+            self.sync_with_state()
+            yield SwitchStateResponse(key=self.key, state=self._switch_state)
+            
 class ThinkingSoundEntity(ESPHomeEntity):
     def __init__(
         self,
