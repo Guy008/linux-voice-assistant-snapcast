@@ -33,6 +33,8 @@ from aioesphomeapi.api_pb2 import (  # type: ignore[attr-defined]
     VoiceAssistantWakeWord,
     ConnectRequest,
 )
+from aioesphomeapi.core import MESSAGE_TYPE_TO_PROTO
+
 from aioesphomeapi.model import (
     VoiceAssistantEventType,
     VoiceAssistantFeature,
