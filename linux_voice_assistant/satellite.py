@@ -285,7 +285,7 @@ class VoiceSatelliteProtocol(APIServer):
             
             yield DeviceInfoResponse(
                 uses_password=False,
-                name=device_name,,
+                name=device_name,
                 mac_address=self.state.mac_address,
                 manufacturer="Open Home Foundation",
                 model="Linux Voice Assistant",                
