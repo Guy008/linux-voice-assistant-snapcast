@@ -1,5 +1,7 @@
 """Voice satellite protocol."""
 
+import asyncio
+import re
 import hashlib
 import logging
 import posixpath
