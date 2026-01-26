@@ -18,6 +18,7 @@ from aioesphomeapi.api_pb2 import (  # type: ignore[attr-defined]
     ListEntitiesRequest,
     MediaPlayerCommandRequest,
     SubscribeHomeAssistantStatesRequest,
+    SwitchCommandRequest,
     VoiceAssistantAnnounceFinished,
     VoiceAssistantAnnounceRequest,
     VoiceAssistantAudio,
@@ -29,7 +30,9 @@ from aioesphomeapi.api_pb2 import (  # type: ignore[attr-defined]
     VoiceAssistantSetConfiguration,
     VoiceAssistantTimerEventResponse,
     VoiceAssistantWakeWord,
+    AuthenticationRequest,
 )
+from aioesphomeapi.core import MESSAGE_TYPE_TO_PROTO
 from aioesphomeapi.model import (
     VoiceAssistantEventType,
     VoiceAssistantFeature,
@@ -46,6 +49,7 @@ from .util import call_all
 
 _LOGGER = logging.getLogger(__name__)
 
+PROTO_TO_MESSAGE_TYPE = {v: k for k, v in MESSAGE_TYPE_TO_PROTO.items()}
 
 class VoiceSatelliteProtocol(APIServer):
 
@@ -225,6 +229,7 @@ class VoiceSatelliteProtocol(APIServer):
                 ListEntitiesRequest,
                 SubscribeHomeAssistantStatesRequest,
                 MediaPlayerCommandRequest,
+                SwitchCommandRequest,
             ),
         ):
             for entity in self.state.entities:
@@ -451,3 +456,15 @@ class VoiceSatelliteProtocol(APIServer):
             trained_languages=external_wake_word.trained_languages,
             wake_word_path=config_path,
         )
+
+    def process_packet(self, msg_type: int, packet_data: bytes) -> None:
+        super().process_packet(msg_type, packet_data)
+
+        if msg_type == PROTO_TO_MESSAGE_TYPE[AuthenticationRequest]:
+            self.state.connected = True
+            # Send states after connect
+            states = []
+            for entity in self.state.entities:
+                states.extend(entity.handle_message(SubscribeHomeAssistantStatesRequest()))
+            self.send_messages(states)
+            _LOGGER.debug("Sent entity states after connect")
