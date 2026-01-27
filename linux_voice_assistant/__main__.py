@@ -85,6 +85,14 @@ async def main() -> None:
         "--processing-sound", default=str(_SOUNDS_DIR / "processing.wav"),
         help="Short sound to play while assistant is processing (thinking)"
     )
+    parser.add_argument(
+        "--mute-sound", default=str(_SOUNDS_DIR / "mute_switch_on.flac"),
+        help="Sound to play when muting the assistant"
+    )
+    parser.add_argument(
+        "--unmute-sound", default=str(_SOUNDS_DIR / "mute_switch_off.flac"),
+        help="Sound to play when unmuting the assistant"
+    )     
     #
     parser.add_argument("--preferences-file", default=_REPO_DIR / "preferences.json")
     #
@@ -233,6 +241,8 @@ async def main() -> None:
         wakeup_sound=args.wakeup_sound,
         timer_finished_sound=args.timer_finished_sound,
         processing_sound=args.processing_sound,
+        mute_sound=args.mute_sound,
+        unmute_sound=args.unmute_sound,          
         preferences=preferences,
         preferences_path=preferences_path,
         refractory_seconds=args.refractory_seconds,
@@ -345,7 +355,7 @@ def process_audio(state: ServerState, mic, block_size: int):
                                     if prob > 0.5:
                                         activated = True
 
-                        if activated:
+                        if activated and not state.muted:
                             # Check refractory
                             now = time.monotonic()
                             if (last_active is None) or (
@@ -360,7 +370,7 @@ def process_audio(state: ServerState, mic, block_size: int):
                         if state.stop_word.process_streaming(micro_input):
                             stopped = True
 
-                    if stopped and (state.stop_word.id in state.active_wake_words):
+                    if stopped and (state.stop_word.id in state.active_wake_words) and not state.muted:
                         state.satellite.stop()
                 except Exception:
                     _LOGGER.exception("Unexpected error handling audio")
