@@ -116,6 +116,7 @@ class MediaPlayerEntity(ESPHomeEntity):
                 announcement = msg.has_announcement and msg.announcement
                 yield from self.play(msg.media_url, announcement=announcement)
             elif msg.has_command:
+                command = MediaPlayerCommand(msg.command)
                 if msg.command == MediaPlayerCommand.PAUSE:
                     self.music_player.pause()
                     yield self._update_state(MediaPlayerState.PAUSED)
