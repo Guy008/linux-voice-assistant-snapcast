@@ -49,8 +49,8 @@ python3 -m linux_voice_assistant ... \
 ```
 
 Available sounds:
-* **Wake sounds**: `wake_word_triggered.flac` (default), `wake_word_triggered_old.wav` (classic)
-* **Timer sounds**: `timer_finished.flac` (default), `timer_finished_old.wav` (classic)
+* **Wake sounds**: `wake_word_triggered.flac` (default), `wake_word_triggered_old.wav`
+* **Timer sounds**: `timer_finished.flac` (default), `timer_finished_old.wav`
 
 The optional "thinking" sound plays while the assistant is processing. Enable it on startup with:
 ``` sh
