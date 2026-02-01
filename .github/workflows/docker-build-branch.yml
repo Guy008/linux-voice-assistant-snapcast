@@ -25,7 +25,10 @@ jobs:
 
       - name: Extract clean branch name
         id: extract_branch
-        run: echo "CLEAN_BRANCH_NAME=$(echo ${{ github.head_ref || github.ref_name }} | sed 's|.*/||')" >> $GITHUB_ENV
+        run: |
+          echo "CLEAN_BRANCH_NAME=$(echo ${{ github.head_ref || github.ref_name }} | sed 's|.*/||')" >> $GITHUB_ENV
+          echo "REGISTRY_LOWER=$(echo '${{ env.REGISTRY }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+          echo "REPOSITORY_LOWER=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
       - name: Log in to the Container registry
         uses: docker/login-action@v3.1.0
@@ -49,7 +52,7 @@ jobs:
           platforms: linux/amd64,linux/aarch64
           push: true
           tags: |
-            ${{ toLower(env.REGISTRY) }}/${{ toLower(github.repository) }}:${{ toLower(env.CLEAN_BRANCH_NAME) }}
+            ${{ env.REGISTRY_LOWER }}/${{ env.REPOSITORY_LOWER }}:${{ env.CLEAN_BRANCH_NAME }}
           labels: |
             branch=${{ env.CLEAN_BRANCH_NAME }}
 

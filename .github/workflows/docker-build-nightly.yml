@@ -21,6 +21,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: Set lowercase registry and repository
+        run: |
+          echo "REGISTRY_LOWER=$(echo '${{ env.REGISTRY }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+          echo "REPOSITORY_LOWER=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
       - name: Log in to the Container registry
         uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
         with:
@@ -39,7 +43,7 @@ jobs:
           context: .
           platforms: linux/amd64,linux/aarch64
           push: true
-          tags: ${{ toLower(env.REGISTRY) }}/${{ toLower(github.repository) }}:nightly
+          tags: ${{ env.REGISTRY_LOWER }}/${{ env.REPOSITORY_LOWER }}:nightly
           labels: "nightly"
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v1.4.4
