@@ -39,7 +39,7 @@ jobs:
           context: .
           platforms: linux/amd64,linux/aarch64
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository }}:nightly
+          tags: ${{ env.REGISTRY | toLower }}/${{ github.repository | toLower }}:nightly
           labels: "nightly"
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v1.4.4

@@ -49,7 +49,7 @@ jobs:
           platforms: linux/amd64,linux/aarch64
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ github.repository }}:${{ env.CLEAN_BRANCH_NAME }}
+            ${{ env.REGISTRY | toLower }}/${{ github.repository | toLower }}:${{ env.CLEAN_BRANCH_NAME | toLower }}
           labels: |
             branch=${{ env.CLEAN_BRANCH_NAME }}
 
