@@ -55,6 +55,62 @@ Edit the .env file and change the values to your needs:
 vim .env
 ```
 
+```ini
+# Linux-Voice-Assistant - Docker Environment Configuration
+# Copy this file to .env and customize for your setup by 'cp .env.example .env'
+
+### Enable debug mode (optional):
+# ENABLE_DEBUG="1"
+
+### List audio devices (optional):
+# if enabled normal startup is disabled
+# LIST_DEVICES="1"
+
+### User ID:
+# This is used to set the correct permissions for the accessing the audio device and accessing the PulseAudio socket
+USER_ID="1000"
+
+### Name for the client (optional):
+# by default it uses the HOSTNAME variable from the piCompose environment which includes the MAC from the network card
+# CLIENT_NAME="My Voice Assistant Speaker"
+
+### PulseAudio socket path on the host:
+# PulseAudio Server:    /run/user/1000/pulse
+# Pipewire Server:      /run/user/1000/pulse/native
+PULSE_SERVER="unix:/run/user/${USER_ID}/pulse/native"
+XDG_RUNTIME_DIR="/run/user/${USER_ID}"
+
+### Path to the preferences file (optional):
+# PREFERENCES_FILE="/app/configuration/preferences.json"
+
+### Port for the api (optional):
+# PORT="6053"
+
+### Audio input device (optional):
+# AUDIO_INPUT_DEVICE="default"
+
+### Audio output device (optional):
+# AUDIO_OUTPUT_DEVICE="default"
+
+# Enable thinking sound (optional):
+# ENABLE_THINKING_SOUND="1"
+
+# Wake model (optional):
+# WAKE-MODEL="okay_nabu"
+
+# Refactory seconds (optional):
+# REFACTORY_SECONDS="2"
+
+# Sound files (optional):
+# WAKEUP_SOUND="sounds/wake_word_triggered.flac"
+# TIMER_FINISHED_SOUND="sounds/timer_finished.flac"
+# PROCESSING_SOUND="sounds/processing.wav"
+# MUTE_SOUND="sounds/mute_switch_on.flac"
+# UNMUTE_SOUND="sounds/mute_switch_off.flac"
+```
+
+You can various settings here, for example the audio sounds which are played when the wake word is detected or when the timer is finished.
+
 💡 **Note:** You can exit vim with :wq or :q! if you dont want to save the changes.
 
 Start the application:
