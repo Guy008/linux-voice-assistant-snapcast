@@ -110,7 +110,7 @@ XDG_RUNTIME_DIR="/run/user/${USER_ID}"
 # UNMUTE_SOUND="sounds/mute_switch_off.flac"
 ```
 
-You can various settings here, for example the audio sounds which are played when the wake word is detected or when the timer is finished.
+You can change various settings here, for example the audio sounds which are played when the wake word is detected or when the timer is finished.
 
 💡 **Note:** You can exit vim with :wq or :q! if you dont want to save the changes.
 
