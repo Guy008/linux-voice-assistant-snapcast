@@ -69,6 +69,7 @@ vim .env
 ### User ID:
 # This is used to set the correct permissions for the accessing the audio device and accessing the PulseAudio socket
 USER_ID="1000"
+USER_GROUP="1000"
 
 ### Name for the client (optional):
 # by default it uses the HOSTNAME variable from the piCompose environment which includes the MAC from the network card
@@ -193,7 +194,7 @@ Paste the following content into the file:
 
 ``` ini
 [Unit]
-Description=Wyoming Voice Assistant (wyomingpi2)
+Description=Linux-Voice-Assistant
 After=network-online.target
 Wants=network-online.target
 
@@ -206,6 +207,7 @@ Environment=PATH=/home/pi/linux-voice-assistant/.venv/bin:/usr/bin:/bin
 # Environment=ENABLE_DEBUG="1"
 # Environment=LIST_DEVICES="1"
 Environment=USER_ID="1000"
+Environment=USER_GROUP="1000"
 Environment=CLIENT_NAME="My Voice Assistant Speaker"
 Environment=PULSE_SERVER="unix:/run/user/${USER_ID}/pulse/native"
 Environment=XDG_RUNTIME_DIR="/run/user/${USER_ID}"
@@ -232,7 +234,7 @@ WantedBy=multi-user.target
 
 💡 **Note:** We are using the `docker-entrypoint.sh` script to start the application. This script is located in the root of the repository. But there is no docker used. Only the start script is used.
 
-💡 **Note:** Replace `$USER_ID` with your actual user id that you want to run the voice assistant.
+💡 **Note:** Replace `USER_ID` with your actual user id that you want to run the voice assistant. Do the same for `USER_GROUP`.
 
 Reload the systemd daemon and start the service:
 
@@ -275,6 +277,7 @@ The following variables can be configured in the `.env` or in the service file:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `USER_ID` | `1000` | User ID for the container (usually 1000 for the first user) |
+| `GROUP_ID` | `1000` | GROUP ID for the container (usually 1000 for the first users group) |
 | `CLIENT_NAME` | (optional) | Custom name for this voice assistant instance |
 | `PULSE_SERVER` | `unix:/run/user/${USER_ID}/pulse/native` | Path to the PulseAudio/PipeWire socket |
 | `XDG_RUNTIME_DIR` | `/run/user/${USER_ID}` | XDG runtime directory |
