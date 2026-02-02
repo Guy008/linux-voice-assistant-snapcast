@@ -89,8 +89,8 @@ If you want to setup the software on your own hardware, for example if you want 
 It is on your own to choose the audio service you want to use.
 
 - **a) Existing PipeWire/PulseAudio** Use if already installed
-- **b) Install PipeWire** (recommended): Install PipeWire and configure. See [Install Audioservice - Pipewire](install_audioservice.md)
-- **c) Install PulseAudio** Install PulseAudio as alternative. See [Install Audioservice - PulseAudio](install_audioservice.md)
+- **b) Install PipeWire** (recommended): Install PipeWire and configure. See [Install Audioservice - Pipewire](install_audioserver.md)
+- **c) Install PulseAudio** Install PulseAudio as alternative. See [Install Audioservice - PulseAudio](install_audioserver.md)
 
 #### Step 2: Install Application:
 
