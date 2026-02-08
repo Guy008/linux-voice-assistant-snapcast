@@ -37,7 +37,7 @@ The Linux audio stack consists of multiple layers working together:
 │  │   └─────────┘  └─────────┘  └───────────────────┘   │    │
 │  └─────────────────────────────────────────────────────┘    │
 │                                                             │
-│  XDG_RUNTIME_DIR=/run/user/1000                             │
+│  LVA_XDG_RUNTIME_DIR=/run/user/1000                             │
 │  └── Socket: /run/user/1000/pipewire-0                      │
 │      Socket: /run/user/1000/pulse/native                    │
 └─────────────────────────────────────────────────────────────┘
@@ -52,10 +52,10 @@ The Linux audio stack consists of multiple layers working together:
 │  │                                                     │    │
 │  │  Accesses audio via:                                │    │
 │  │  - PipeWire/PulseAudio client library               │    │
-│  │  - Uses same XDG_RUNTIME_DIR socket path            │    │
+│  │  - Uses same LVA_XDG_RUNTIME_DIR socket path            │    │
 │  │                                                     │    │
 │  │  Environment Variables:                             │    │
-│  │  - XDG_RUNTIME_DIR=/run/user/1000 (host path)       │    │
+│  │  - LVA_XDG_RUNTIME_DIR=/run/user/1000 (host path)       │    │
 │  │  - AUDIO_INPUT_DEVICE="default"                     │    │
 │  │  - AUDIO_OUTPUT_DEVICE="default"                    │    │
 │  └─────────────────────────────────────────────────────┘    │
@@ -74,7 +74,7 @@ The Linux audio stack consists of multiple layers working together:
    - Applications connect to PipeWire/PulseAudio, not directly to ALSA, otherwhise the container would need access to the ALSA devices. If you use ALSA only only one application can connect to the device at a time.
 
 2. **Docker Integration**:
-   - The XDG_RUNTIME_DIR socket must be mounted from host to container
+   - The LVA_XDG_RUNTIME_DIR socket must be mounted from host to container
    - The container user must have matching UID/GID with host user or the audio group is added.
 
 3. **Communication Flow**:
@@ -89,7 +89,7 @@ The Linux audio stack consists of multiple layers working together:
    ```
 
 4. **Key Configuration Points**:
-   - `XDG_RUNTIME_DIR` must point to host's runtime directory
+   - `LVA_XDG_RUNTIME_DIR` must point to host's runtime directory
    - Container user UID/GID should match host user
 
 ### Docker Compose Example:
@@ -99,7 +99,7 @@ services:
   voice-assistant:
     image: ghcr.io/ohf-voice/linux-voice-assistant:latest
     environment:
-      - XDG_RUNTIME_DIR=/run/user/1000
+      - LVA_XDG_RUNTIME_DIR=/run/user/1000
       - AUDIO_INPUT_DEVICE=default
       - AUDIO_OUTPUT_DEVICE=default
     volumes:
@@ -132,10 +132,10 @@ AUDIO_OUTPUT_DEVICE="default"
 
 If you work with the root user, you need to:
 ``` sh
-export XDG_RUNTIME_DIR=/run/user/${USER_ID}
+export LVA_XDG_RUNTIME_DIR=/run/user/${USERLVA_USER_ID
 ```
 
-💡 **Note:** Replace `$USER_ID` with your actual user id that you want to run the voice assistant.
+💡 **Note:** Replace `$USERLVA_USER_IDth your actual user id that you want to run the voice assistant.
 
 
 ## Troubleshooting:
@@ -144,8 +144,8 @@ export XDG_RUNTIME_DIR=/run/user/${USER_ID}
 
 If the container cannot access audio devices, ensure:
 
-1. The USER_ID in `.env` matches your actual users ID (run `id -u $USER` to check)
-2. The XDG_RUNTIME_DIR path exists on the host
+1. The USERLVA_USER_ID`.env` matches your actual users ID (run `id -u $USER` to check)
+2. The LVA_XDG_RUNTIME_DIR path exists on the host
 
 ### Permission Denied Errors:
 

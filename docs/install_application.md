@@ -68,8 +68,8 @@ vim .env
 
 ### User ID:
 # This is used to set the correct permissions for the accessing the audio device and accessing the PulseAudio socket
-USER_ID="1000"
-USER_GROUP="1000"
+USERLVA_USER_ID00"
+LVA_USER_GROUP="1000"
 
 ### Name for the client (optional):
 # by default it uses the HOSTNAME variable from the piCompose environment which includes the MAC from the network card
@@ -78,8 +78,8 @@ USER_GROUP="1000"
 ### PulseAudio socket path on the host:
 # PulseAudio Server:    /run/user/1000/pulse
 # Pipewire Server:      /run/user/1000/pulse/native
-PULSE_SERVER="unix:/run/user/${USER_ID}/pulse/native"
-XDG_RUNTIME_DIR="/run/user/${USER_ID}"
+LVA_PULSE_SERVER="unix:/run/user/${USERLVA_USER_IDlse/native"
+LVA_XDG_RUNTIME_DIR="/run/user/${USERLVA_USER_ID
 
 ### Path to the preferences file (optional):
 # PREFERENCES_FILE="/app/configuration/preferences.json"
@@ -206,11 +206,11 @@ WorkingDirectory=/home/pi/linux-voice-assistant
 Environment=PATH=/home/pi/linux-voice-assistant/.venv/bin:/usr/bin:/bin
 # Environment=ENABLE_DEBUG="1"
 # Environment=LIST_DEVICES="1"
-Environment=USER_ID="1000"
-Environment=USER_GROUP="1000"
+Environment=USERLVA_USER_ID00"
+Environment=LVA_USER_GROUP="1000"
 Environment=CLIENT_NAME="My Voice Assistant Speaker"
-Environment=PULSE_SERVER="unix:/run/user/${USER_ID}/pulse/native"
-Environment=XDG_RUNTIME_DIR="/run/user/${USER_ID}"
+Environment=LVA_PULSE_SERVER="unix:/run/user/${USERLVA_USER_IDlse/native"
+Environment=LVA_XDG_RUNTIME_DIR="/run/user/${USERLVA_USER_ID
 Environment=PREFERENCES_FILE="/home/pi/linux-voice-assistant/preferences.json"
 Environment=PORT="6053"
 # Environment=AUDIO_INPUT_DEVICE="default"
@@ -234,7 +234,7 @@ WantedBy=multi-user.target
 
 💡 **Note:** We are using the `docker-entrypoint.sh` script to start the application. This script is located in the root of the repository. But there is no docker used. Only the start script is used.
 
-💡 **Note:** Replace `USER_ID` with your actual user id that you want to run the voice assistant. Do the same for `USER_GROUP`.
+💡 **Note:** Replace `USERLVA_USER_IDth your actual user id that you want to run the voice assistant. Do the same for `LVA_USER_GROUP`.
 
 Reload the systemd daemon and start the service:
 
@@ -276,11 +276,11 @@ The following variables can be configured in the `.env` or in the service file:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `USER_ID` | `1000` | User ID for the container (usually 1000 for the first user) |
+| `USERLVA_USER_ID`1000` | User ID for the container (usually 1000 for the first user) |
 | `GROUP_ID` | `1000` | GROUP ID for the container (usually 1000 for the first users group) |
 | `CLIENT_NAME` | (optional) | Custom name for this voice assistant instance |
-| `PULSE_SERVER` | `unix:/run/user/${USER_ID}/pulse/native` | Path to the PulseAudio/PipeWire socket |
-| `XDG_RUNTIME_DIR` | `/run/user/${USER_ID}` | XDG runtime directory |
+| `LVA_PULSE_SERVER` | `unix:/run/user/${USERLVA_USER_IDlse/native` | Path to the PulseAudio/PipeWire socket |
+| `LVA_XDG_RUNTIME_DIR` | `/run/user/${USERLVA_USER_ID XDG runtime directory |
 | `ENABLE_DEBUG` | (optional) | Set to "1" to enable debug mode |
 | `LIST_DEVICES` | (optional) | Set to "1" to list audio devices instead of starting |
 | `PREFERENCES_FILE` | (optional) | Path to a custom preferences JSON file |

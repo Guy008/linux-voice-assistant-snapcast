@@ -115,7 +115,7 @@ If your driver or audiodevice is loaded and you can see the device with `aplay -
 set the audio volume from 0 to 100:
 
 ```bash
-export XDG_RUNTIME_DIR=/run/user/${USER_ID}
+export LVA_XDG_RUNTIME_DIR=/run/user/${LVA_USER_ID}
 sudo amixer -c seeed2micvoicec set Headphone 100%
 sudo amixer -c seeed2micvoicec set Speaker 100%
 sudo amixer -c Lite set Headphone 100%
@@ -123,13 +123,13 @@ sudo amixer -c Lite set Speaker 100%
 sudo alsactl store
 ```
 
-💡 **Note:** Replace `$USER_ID` with your actual user id that you want to run the voice assistant.
+💡 **Note:** Replace `$LVA_USER_ID` with your actual user id that you want to run the voice assistant.
 
 Alternatively you can use the following command to set the volume:
 
 ```bash
-export XDG_RUNTIME_DIR=/run/user/${USER_ID}
+export LVA_XDG_RUNTIME_DIR=/run/user/${LVA_USER_ID}
 sudo alsamixer
 ```
 
-💡 **Note:** Replace `$USER_ID` with your actual user id that you want to run the voice assistant.
+💡 **Note:** Replace `$LVA_USER_ID` with your actual user id that you want to run the voice assistant.
