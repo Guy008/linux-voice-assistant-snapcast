@@ -53,11 +53,11 @@ class LibMpvPlayer(AudioPlayer):
         :param paused: If True, playback starts paused
         """
         with self._state_lock:
+            self._duck_factor = 1.0  # auto-unduck on new playback
+            self._apply_volume()
             self._set_state(PlayerState.LOADING)
 
-        # Explicitly set pause state before starting playback
         self._mpv.pause = paused
-
         self._log.info("Loading media: %s (paused=%s)", url, paused)
         self._mpv.play(url)
 
@@ -74,6 +74,8 @@ class LibMpvPlayer(AudioPlayer):
         Resume playback if paused.
         """
         with self._state_lock:
+            self._duck_factor = 1.0  # ensure unduck
+            self._apply_volume()
             self._mpv.pause = False
             self._set_state(PlayerState.PLAYING)
 
