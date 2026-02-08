@@ -71,7 +71,7 @@ echo "Checking port $PORT..."
 for i in $(seq 1 $CP_MAX_RETRIES); do
   # Check if PulseAudio is running
   if pactl info >/dev/null 2>&1; then
-    echo "✅ PulseAudio is running (checked $CP_COUNT/$CP_MAX_RETRIES)"
+    echo "✅ PulseAudio is running"
     break
   fi
 
@@ -80,7 +80,7 @@ for i in $(seq 1 $CP_MAX_RETRIES); do
       exit 2
   fi
 
-  echo "⏳ PulseAudio not running yet ($CP_COUNT/$CP_MAX_RETRIES), retrying in $CP_RETRY_DELAY s..."
+  echo "⏳ PulseAudio not running yet, retrying in $CP_RETRY_DELAY s..."
   sleep $CP_RETRY_DELAY
 done
 
