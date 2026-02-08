@@ -1,6 +1,32 @@
 #!/bin/bash
 set -e
 
+### Generate name for this client
+# Get active interface
+IFACE=$(ip route | grep default | awk '{print $5}' | head -n 1)
+
+# Check if IFACE is empty
+if [ -z "$IFACE" ]; then
+    echo "No active network interface found."
+fi
+
+# Check if interface directory exists
+if [ ! -e "/sys/class/net/$IFACE/address" ]; then
+    echo "Interface $IFACE does not exist or has no MAC address."
+fi
+
+# Read MAC address and remove ':'
+MAC=$(cat /sys/class/net/$IFACE/address | tr -d ':')
+
+if [ -z "$MAC" ]; then
+    echo "Could not read MAC address."
+fi
+
+# Generate CLIENT_NAME from it
+TEMP_CLIENT_NAME="lva-${MAC}"
+
+
+### Handlers
 # Handle parameters
 EXTRA_ARGS=""
 
@@ -8,7 +34,7 @@ if [ "$ENABLE_DEBUG" = "1" ]; then
   EXTRA_ARGS="$EXTRA_ARGS --debug"
 fi
 
-CLIENT_NAME=${CLIENT_NAME:-$HOSTNAME}
+CLIENT_NAME=${CLIENT_NAME:-$TEMP_CLIENT_NAME}
 if [ -n "${CLIENT_NAME}" ]; then
   EXTRA_ARGS="$EXTRA_ARGS --name $CLIENT_NAME"
 fi
@@ -36,6 +62,7 @@ if [ "$ENABLE_THINKING_SOUND" = "1" ]; then
 fi
 
 
+### Wait for PulseAudio
 # Wait for PulseAudio to be available before starting the application
 CP_MAX_RETRIES=30
 CP_RETRY_DELAY=1
@@ -58,7 +85,7 @@ for i in $(seq 1 $CP_MAX_RETRIES); do
 done
 
 
-# Check port availability
+### Check port availability
 # PORT variable is used from env
 PA_MAX_RETRIES=30
 PA_RETRY_DELAY=2
@@ -79,7 +106,8 @@ for i in $(seq 1 $PA_MAX_RETRIES); do
   sleep $PA_RETRY_DELAY
 done
 
-# Start application
+
+### Start application
 if [ "$LIST_DEVICES" = "1" ]; then
   echo "list input devices"
   ./script/run "$@" $EXTRA_ARGS --list-input-devices
