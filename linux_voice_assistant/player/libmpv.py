@@ -12,7 +12,8 @@ class LibMpvPlayer(AudioPlayer):
         self._state = PlayerState.IDLE
         self._state_lock = threading.Lock()
 
-        self._last_volume: float = 100.0  # mpv Volume 0-100
+        self._user_volume: float = 100.0  # 0–100
+        self._duck_factor: float = 1.0  # 0.0–1.0
 
         self._mpv = mpv.MPV(
             audio_display=False,
@@ -55,22 +56,24 @@ class LibMpvPlayer(AudioPlayer):
 
     # -------- Volume / Ducking --------
 
+    def _apply_volume(self):
+        effective = self._user_volume * self._duck_factor
+        self._mpv.volume = max(0.0, min(100.0, effective))
+
     def set_volume(self, volume: float):
-        """
-        volume: float 0.0-1.0
-        """
         with self._state_lock:
-            self._last_volume = volume * 100
-            self._mpv.volume = self._last_volume
+            self._user_volume = max(0.0, min(100.0, volume))
+            self._apply_volume()
 
     def duck(self, factor: float = 0.5):
         with self._state_lock:
-            self._last_volume = getattr(self, "_last_volume", self._mpv.volume)
-            self._mpv.volume = self._last_volume * factor
+            self._duck_factor = max(0.0, min(1.0, factor))
+            self._apply_volume()
 
     def unduck(self):
         with self._state_lock:
-            self._mpv.volume = getattr(self, "_last_volume", self._mpv.volume)
+            self._duck_factor = 1.0
+            self._apply_volume()
 
     # -------- Internal Helpers --------
 
