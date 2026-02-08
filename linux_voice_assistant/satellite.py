@@ -524,7 +524,6 @@ class VoiceSatelliteProtocol(APIServer):
                 )
             self.send_messages(states)
             _LOGGER.debug("Sent entity states after connect")
-        _LOGGER.info("Disconnected from Home Assistant")
 
     def _download_external_wake_word(
         self, external_wake_word: VoiceAssistantExternalWakeWord
