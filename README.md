@@ -39,13 +39,34 @@ The microphone device **must** support 16Khz mono audio.
 
 Use `--audio-output-device` to change the speaker device. Use `--list-output-devices` to see the available speakers.
 
+### Sounds
+
+Customize wake word and timer sounds (defaults are used if not specified):
+``` sh
+python3 -m linux_voice_assistant ... \
+    --wakeup-sound sounds/wake_word_triggered_old.wav \
+    --timer-finished-sound sounds/timer_finished.flac
+```
+
+Available sounds:
+* **Wake sounds**: `wake_word_triggered.flac` (default), `wake_word_triggered_old.wav`
+* **Timer sounds**: `timer_finished.flac` (default), `timer_finished_old.wav`
+
+The optional "thinking" sound plays while the assistant is processing. Enable it on startup with:
+``` sh
+python3 -m linux_voice_assistant ... \
+    --enable-thinking-sound
+```
+
+This enables the thinking sound by default and sets the Home Assistant switch to ON. The switch can be toggled at any time from the device page.
+
 ## Wake Word
 
 Change the default wake word with `--wake-model <id>` where `<id>` is the name of a model in the `wakewords` directory. For example, `--wake-model hey_jarvis` will load `wakewords/hey_jarvis.tflite` by default.
 
 You can include more wakeword directories by adding `--wake-word-dir <DIR>` where `<DIR>` contains either [microWakeWord][] or [openWakeWord][] config files and `.tflite` models. For example, `--wake-word-dir wakewords/openWakeWord` will include the default wake words for openWakeWord.
 
-If you want to add [other wakeword][wakewords-collection], make sure to create a small JSON config file to identify it as an openWakeWord model. For example, download the [GLaDOS][glados] model to `glados.tflite` and create `glados.json` with:
+If you want to add [other wakewords][wakewords-collection], make sure to create a small JSON config file to identify it as an openWakeWord model. For example, download the [GLaDOS][glados] model to `glados.tflite` and create `glados.json` with:
 
 ``` json
 {
