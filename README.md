@@ -22,12 +22,49 @@ Experimental Linux-Voice-Assistant for [Home Assistant](https://www.home-assista
 
 ### Hardware:
 
-You can for example use the Raspberry Pi Zero 2W with the [Satellite1 Hat Board](https://futureproofhomes.net/products/satellite1-top-microphone-board) or the [Respeaker 2Mic_Hat](https://wiki.seeedstudio.com/ReSpeaker_2_Mics_Pi_HAT/). A list for possible compatible hardware can be found in the [PiCompose documentation](https://github.com/florian-asche/PiCompose) but basically any microphone that works with [Pipewire](https://pipewire.org/) can be used.
+You can for example use the Raspberry Pi Zero 2W with the [Satellite1 Hat Board](https://futureproofhomes.net/products/satellite1-top-microphone-board), the [Respeaker Lite](https://wiki.seeedstudio.com/reSpeaker_usb_v3/) or the [Respeaker 2Mic_Hat](https://wiki.seeedstudio.com/ReSpeaker_2_Mics_Pi_HAT/). A list for possible compatible hardware can be found in the [PiCompose documentation](https://github.com/florian-asche/PiCompose) but basically any microphone that works with [Pipewire](https://pipewire.org/) can be used with the prebuild image.
 
 ### Software:
 
-See [Linux-Voice-Assistant - Installation](docs/install.md)
+#### Installation:
 
+We have different installation methods available (Docker, systemd), each with its own dedicated instructions.
+
+See [Linux-Voice-Assistant - Installation](docs/install.md). 
+
+#### Parameter overview:
+
+``` sh
+usage: __main__.py [-h] [--name NAME] [--audio-input-device AUDIO_INPUT_DEVICE] [--list-input-devices]
+                   [--audio-input-block-size AUDIO_INPUT_BLOCK_SIZE] [--audio-output-device AUDIO_OUTPUT_DEVICE]
+                   [--list-output-devices] [--wake-word-dir WAKE_WORD_DIR] [--wake-model WAKE_MODEL] [--stop-model STOP_MODEL]
+                   [--download-dir DOWNLOAD_DIR] [--refractory-seconds REFRACTORY_SECONDS] [--wakeup-sound WAKEUP_SOUND]
+                   [--timer-finished-sound TIMER_FINISHED_SOUND] [--processing-sound PROCESSING_SOUND] [--mute-sound MUTE_SOUND]
+                   [--unmute-sound UNMUTE_SOUND] [--preferences-file PREFERENCES_FILE] [--host HOST] [--port PORT]
+                   [--enable-thinking-sound] [--debug]
+```
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `--name` | Name of the voice assistant device (required) | - |
+| `--audio-input-device` | Soundcard name for input device | System default microphone |
+| `--audio-input-block-size` | Audio input block size in samples | 1024 |
+| `--audio-output-device` | mpv name for output device | System default speaker |
+| `--wake-word-dir` | Directory with wake word models (.tflite) and configs (.json) | `wakewords/` |
+| `--wake-model` | ID of active wake word model | `okay_nabu` |
+| `--stop-model` | ID of stop model | `stop` |
+| `--download-dir` | Directory to download custom wake word models, etc. | `local/` |
+| `--refractory-seconds` | Seconds before wake word can be activated again | 2.0 |
+| `--wakeup-sound` | Sound file played when wake word is detected | `sounds/wake_word_triggered.flac` |
+| `--timer-finished-sound` | Sound file played when timer finishes | `sounds/timer_finished.flac` |
+| `--processing-sound` | Sound played while assistant is processing | `sounds/processing.wav` |
+| `--mute-sound` | Sound played when muting the assistant | `sounds/mute_switch_on.flac` |
+| `--unmute-sound` | Sound played when unmuting the assistant | `sounds/mute_switch_off.flac` |
+| `--preferences-file` | Path to preferences JSON file | `preferences.json` |
+| `--host` | Address for ESPHome server | `0.0.0.0` |
+| `--port` | Port for ESPHome server | 6053 |
+| `--enable-thinking-sound` | Enable thinking sound on startup | False |
+| `--debug` | Print DEBUG messages to console | False |
 
 ## Build Information:
 
