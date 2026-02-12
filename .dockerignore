@@ -1,0 +1,10 @@
+*
+
+!/pyproject.toml
+!/setup.cfg
+!/script/*
+!/docker-entrypoint.sh
+!/linux_voice_assistant/*
+!/sounds/*
+!/wakewords/*
+!/wakewords/openWakeWord/*

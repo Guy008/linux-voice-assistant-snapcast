@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import threading
 from abc import abstractmethod
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, List, Optional
@@ -9,8 +10,8 @@ from typing import TYPE_CHECKING, List, Optional
 # pylint: disable=no-name-in-module
 from aioesphomeapi._frame_helper.packets import make_plain_text_packets
 from aioesphomeapi.api_pb2 import (  # type: ignore[attr-defined]
-    ConnectRequest,
-    ConnectResponse,
+    AuthenticationRequest,
+    AuthenticationResponse,
     DisconnectRequest,
     DisconnectResponse,
     HelloRequest,
@@ -36,6 +37,8 @@ class APIServer(asyncio.Protocol):
         self._pos: int = 0
         self._transport = None
         self._writelines = None
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
+        self._loop_thread_id: Optional[int] = None
 
     @abstractmethod
     def handle_message(self, msg: message.Message) -> Iterable[message.Message]:
@@ -57,8 +60,8 @@ class APIServer(asyncio.Protocol):
             )
             return
 
-        if isinstance(msg_inst, ConnectRequest):
-            self.send_messages([ConnectResponse()])
+        if isinstance(msg_inst, AuthenticationRequest):
+            self.send_messages([AuthenticationResponse()])
         elif isinstance(msg_inst, DisconnectRequest):
             self.send_messages([DisconnectResponse()])
             _LOGGER.debug("Disconnect requested")
@@ -75,7 +78,7 @@ class APIServer(asyncio.Protocol):
             self.send_messages(msgs)
 
     def send_messages(self, msgs: List[message.Message]):
-        if self._writelines is None:
+        if self._writelines is None or not msgs:
             return
 
         packets = [
@@ -83,11 +86,25 @@ class APIServer(asyncio.Protocol):
             for msg in msgs
         ]
         packet_bytes = make_plain_text_packets(packets)
+        if (
+            self._loop is not None
+            and self._loop_thread_id is not None
+            and threading.get_ident() != self._loop_thread_id
+        ):
+            self._loop.call_soon_threadsafe(self._writelines, packet_bytes)
+            return
+
         self._writelines(packet_bytes)
 
     def connection_made(self, transport) -> None:
         self._transport = transport
         self._writelines = transport.writelines
+        try:
+            self._loop = asyncio.get_running_loop()
+        except RuntimeError:
+            self._loop = None
+        else:
+            self._loop_thread_id = threading.get_ident()
 
     def data_received(self, data: bytes):
         if self._buffer is None:
@@ -141,6 +158,8 @@ class APIServer(asyncio.Protocol):
     def connection_lost(self, exc):
         self._transport = None
         self._writelines = None
+        self._loop = None
+        self._loop_thread_id = None
 
     def _read_varuint(self) -> int:
         """Read a varuint from the buffer or -1 if the buffer runs out of bytes."""
