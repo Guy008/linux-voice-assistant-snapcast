@@ -4,7 +4,7 @@
 
 Experimental Linux-Voice-Assistant for [Home Assistant](https://www.home-assistant.io/) that uses the [ESPHome](https://esphome.io/) protocol.
 
-[![A project from the Open Home Foundation](https://www.openhomefoundation.org/badges/ohf-open-standard.png)](https://www.openhomefoundation.org/)
+[![A project from the Open Home Foundation](https://www.openhomefoundation.org/badges/ohf-project.png)](https://www.openhomefoundation.org/)
 
 ## Features:
 
