@@ -222,7 +222,7 @@ WantedBy=multi-user.target
 
 💡 **Note:** We are using the `docker-entrypoint.sh` script to start the application. This script is located in the root of the repository. But there is no docker used. Only the start script is used.
 
-💡 **Note:** Replace `USERLVA_USER_IDth your actual user id that you want to run the voice assistant. Do the same for `LVA_USER_GROUP`.
+💡 **Note:** Replace `LVA_USER_ID` with your actual user id that you want to run the voice assistant. Do the same for `LVA_USER_GROUP`.
 
 Reload the systemd daemon and start the service:
 
