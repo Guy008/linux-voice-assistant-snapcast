@@ -83,8 +83,10 @@ context.modules = [
 
 Make sure that you only run Pulseaudio and there is no Pipewire installed.
 
+``` sh
 sudo apt remove --purge pipewire pipewire-pulse wireplumber
 sudo apt autoremove
+```
 
 Install Pulseaudio
 
