@@ -347,3 +347,51 @@ class ThinkingSoundEntity(ESPHomeEntity):
             # Always return our internal switch state
             self.sync_with_state()
             yield SwitchStateResponse(key=self.key, state=self._switch_state)
+
+
+# -----------------------------------------------------------------------------
+
+
+class MicSettingEntity(ESPHomeEntity):
+    def __init__(
+        self,
+        server: APIServer,
+        key: int,
+        name: str,
+        object_id: str,
+        initial_value: float = 0.0,
+    ) -> None:
+        ESPHomeEntity.__init__(self, server)
+
+        self.key = key
+        self.name = name
+        self.object_id = object_id
+        self.value = initial_value
+        self._log = logging.getLogger(f"{self.__class__.__name__}[{self.key}]")
+
+    def handle_message(self, msg: message.Message) -> Iterable[message.Message]:
+        from aioesphomeapi.api_pb2 import NumberCommandRequest, NumberStateResponse, ListEntitiesNumberResponse
+
+        if isinstance(msg, NumberCommandRequest) and (msg.key == self.key):
+            # User changed the number value
+            new_value = float(msg.value)
+            self._log.debug("Number value changed: %s => %s", self.value, new_value)
+            self.value = new_value
+            # Return the new state immediately
+            yield NumberStateResponse(key=self.key, state=self.value)
+        elif isinstance(msg, ListEntitiesRequest):
+            from aioesphomeapi.model import NumberMode
+            yield ListEntitiesNumberResponse(
+                object_id=self.object_id,
+                key=self.key,
+                name=self.name,
+                entity_category=EntityCategory.CONFIG,
+                icon="mdi:numeric",
+                min_value=0.0,
+                max_value=100.0,
+                step=1.0,
+                mode=NumberMode.BOX,
+            )
+        elif isinstance(msg, SubscribeHomeAssistantStatesRequest):
+            # Always return our internal number state
+            yield NumberStateResponse(key=self.key, state=self.value)

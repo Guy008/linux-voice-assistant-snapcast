@@ -147,6 +147,24 @@ class VoiceSatelliteProtocol(APIServer):
         thinking_sound_switch.update_set_thinking_sound_enabled(self._set_thinking_sound_enabled)
         thinking_sound_switch.sync_with_state()
 
+        # Add/update mic setting entity for debugging
+        mic_setting_entity = self.state.mic_setting_entity
+        if mic_setting_entity is None:
+            from .entity import MicSettingEntity
+            mic_setting_entity = MicSettingEntity(
+                server=self,
+                key=len(state.entities),
+                name="Mic Setting",
+                object_id="mic_setting",
+                initial_value=0.5,
+            )
+            self.state.entities.append(mic_setting_entity)
+            self.state.mic_setting_entity = mic_setting_entity
+        elif mic_setting_entity not in self.state.entities:
+            self.state.entities.append(mic_setting_entity)
+
+        mic_setting_entity.server = self
+
         self._is_streaming_audio = False
         self._tts_url: Optional[str] = None
         self._tts_played = False
