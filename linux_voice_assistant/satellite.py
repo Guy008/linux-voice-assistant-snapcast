@@ -19,6 +19,7 @@ from aioesphomeapi.api_pb2 import (  # type: ignore[attr-defined]
     ListEntitiesDoneResponse,
     ListEntitiesRequest,
     MediaPlayerCommandRequest,
+    NumberCommandRequest,
     SubscribeHomeAssistantStatesRequest,
     SwitchCommandRequest,
     VoiceAssistantAnnounceFinished,
@@ -44,7 +45,7 @@ from pymicro_wakeword import MicroWakeWord
 from pyopen_wakeword import OpenWakeWord
 
 from .api_server import APIServer
-from .entity import MediaPlayerEntity, MuteSwitchEntity, ThinkingSoundEntity
+from .entity import MediaPlayerEntity, MuteSwitchEntity, ThinkingSoundEntity, WakeWordSensitivityNumberEntity
 from .models import AvailableWakeWord, ServerState, WakeWordType
 from .util import call_all
 
@@ -147,23 +148,28 @@ class VoiceSatelliteProtocol(APIServer):
         thinking_sound_switch.update_set_thinking_sound_enabled(self._set_thinking_sound_enabled)
         thinking_sound_switch.sync_with_state()
 
-        # Add/update mic setting entity for debugging
-        mic_setting_entity = self.state.mic_setting_entity
-        if mic_setting_entity is None:
-            from .entity import MicSettingEntity
-            mic_setting_entity = MicSettingEntity(
+        # Add/update sensitivity number entity
+        sensitivity_number_entity = self.state.sensitivity_number_entity
+        if sensitivity_number_entity is None:
+            sensitivity_number_entity = WakeWordSensitivityNumberEntity(
                 server=self,
                 key=len(state.entities),
-                name="Mic Setting",
-                object_id="mic_setting",
-                initial_value=0.5,
+                name="Wake Word Sensitivity",
+                object_id="wake_word_sensitivity",
+                get_sensitivity=lambda: self.state.oww_probability_cutoff,
+                set_sensitivity=self._set_sensitivity,
+                initial_value=self.state.oww_probability_cutoff,
             )
-            self.state.entities.append(mic_setting_entity)
-            self.state.mic_setting_entity = mic_setting_entity
-        elif mic_setting_entity not in self.state.entities:
-            self.state.entities.append(mic_setting_entity)
+            self.state.entities.append(sensitivity_number_entity)
+            self.state.sensitivity_number_entity = sensitivity_number_entity
+        elif sensitivity_number_entity not in self.state.entities:
+            self.state.entities.append(sensitivity_number_entity)
 
-        mic_setting_entity.server = self
+        sensitivity_number_entity.server = self
+        sensitivity_number_entity.update_get_sensitivity(lambda: self.state.oww_probability_cutoff)
+        sensitivity_number_entity.update_set_sensitivity(self._set_sensitivity)
+        sensitivity_number_entity.sync_with_state()
+
 
         self._is_streaming_audio = False
         self._tts_url: Optional[str] = None
@@ -185,6 +191,10 @@ class VoiceSatelliteProtocol(APIServer):
             _LOGGER.debug("Thinking sound disabled")
             pass
         self.state.save_preferences()
+
+    def _set_sensitivity(self, new_value: float) -> None:
+        self.state.oww_probability_cutoff = float(new_value)
+        _LOGGER.debug("Sensitivity value set to: %s", new_value)
 
     def _set_muted(self, new_state: bool) -> None:
         self.state.muted = bool(new_state)
@@ -310,6 +320,7 @@ class VoiceSatelliteProtocol(APIServer):
                 SubscribeHomeAssistantStatesRequest,
                 MediaPlayerCommandRequest,
                 SwitchCommandRequest,
+                NumberCommandRequest,
             ),
         ):
             for entity in self.state.entities:

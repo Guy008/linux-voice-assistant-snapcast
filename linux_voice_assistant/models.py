@@ -16,9 +16,7 @@ if TYPE_CHECKING:
         ESPHomeEntity,
         MediaPlayerEntity,
         MuteSwitchEntity,
-        MicSettingEntity,
         ThinkingSoundEntity,
-        WakeWordSensitivityEntity,
         WakeWordSensitivityNumberEntity,
     )
     from .mpv_player import MpvMediaPlayer
@@ -95,9 +93,7 @@ class ServerState:
     satellite: "Optional[VoiceSatelliteProtocol]" = None
     mute_switch_entity: "Optional[MuteSwitchEntity]" = None
     thinking_sound_entity: "Optional[ThinkingSoundEntity]" = None
-    sensitivity_entity: "Optional[WakeWordSensitivityEntity]" = None
     sensitivity_number_entity: "Optional[WakeWordSensitivityNumberEntity]" = None
-    mic_setting_entity: "Optional[MicSettingEntity]" = None
     wake_words_changed: bool = False
     refractory_seconds: float = 2.0
     thinking_sound_enabled: bool = False

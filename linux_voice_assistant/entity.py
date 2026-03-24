@@ -6,10 +6,13 @@ from typing import Callable, List, Optional, Union
 # pylint: disable=no-name-in-module
 from aioesphomeapi.api_pb2 import (  # type: ignore[attr-defined]
     ListEntitiesMediaPlayerResponse,
+    ListEntitiesNumberResponse,
     ListEntitiesRequest,
     ListEntitiesSwitchResponse,
     MediaPlayerCommandRequest,
     MediaPlayerStateResponse,
+    NumberCommandRequest,
+    NumberStateResponse,
     SubscribeHomeAssistantStatesRequest,
     SwitchCommandRequest,
     SwitchStateResponse,
@@ -19,6 +22,7 @@ from aioesphomeapi.model import (
     MediaPlayerCommand,
     MediaPlayerEntityFeature,
     MediaPlayerState,
+    NumberMode,
 )
 from google.protobuf import message
 
@@ -352,46 +356,58 @@ class ThinkingSoundEntity(ESPHomeEntity):
 # -----------------------------------------------------------------------------
 
 
-class MicSettingEntity(ESPHomeEntity):
+class WakeWordSensitivityNumberEntity(ESPHomeEntity):
     def __init__(
         self,
         server: APIServer,
         key: int,
         name: str,
         object_id: str,
-        initial_value: float = 0.0,
+        get_sensitivity: Callable[[], float],
+        set_sensitivity: Callable[[float], None],
+        initial_value: float = 0.5,
     ) -> None:
         ESPHomeEntity.__init__(self, server)
 
         self.key = key
         self.name = name
         self.object_id = object_id
+        self._get_sensitivity = get_sensitivity
+        self._set_sensitivity = set_sensitivity
         self.value = initial_value
         self._log = logging.getLogger(f"{self.__class__.__name__}[{self.key}]")
 
-    def handle_message(self, msg: message.Message) -> Iterable[message.Message]:
-        from aioesphomeapi.api_pb2 import NumberCommandRequest, NumberStateResponse, ListEntitiesNumberResponse
+    def update_get_sensitivity(self, get_sensitivity: Callable[[], float]) -> None:
+        self._get_sensitivity = get_sensitivity
 
+    def update_set_sensitivity(self, set_sensitivity: Callable[[float], None]) -> None:
+        self._set_sensitivity = set_sensitivity
+
+    def sync_with_state(self) -> None:
+        self.value = self._get_sensitivity()
+
+    def handle_message(self, msg: message.Message) -> Iterable[message.Message]:
         if isinstance(msg, NumberCommandRequest) and (msg.key == self.key):
-            # User changed the number value
-            new_value = float(msg.value)
-            self._log.debug("Number value changed: %s => %s", self.value, new_value)
+            new_value = float(msg.state)
+            self._log.debug("Sensitivity value changed: %s => %s", self.value, new_value)
             self.value = new_value
-            # Return the new state immediately
+            self._set_sensitivity(new_value)
             yield NumberStateResponse(key=self.key, state=self.value)
         elif isinstance(msg, ListEntitiesRequest):
-            from aioesphomeapi.model import NumberMode
             yield ListEntitiesNumberResponse(
                 object_id=self.object_id,
                 key=self.key,
                 name=self.name,
                 entity_category=EntityCategory.CONFIG,
-                icon="mdi:numeric",
+                icon="mdi:microphone-sensitivity",
                 min_value=0.0,
-                max_value=100.0,
-                step=1.0,
+                max_value=1.0,
+                step=0.01,
                 mode=NumberMode.BOX,
             )
         elif isinstance(msg, SubscribeHomeAssistantStatesRequest):
-            # Always return our internal number state
+            self.sync_with_state()
             yield NumberStateResponse(key=self.key, state=self.value)
+
+
+# -----------------------------------------------------------------------------
