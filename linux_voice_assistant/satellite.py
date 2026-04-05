@@ -168,6 +168,14 @@ class VoiceSatelliteProtocol(APIServer):
         sensitivity_number_entity.server = self
         sensitivity_number_entity.update_get_sensitivity(lambda: self.state.oww_probability_cutoff)
         sensitivity_number_entity.update_set_sensitivity(self._set_sensitivity)
+
+        # Load sensitivity value from preferences (default to 0.7 if not set)
+        if self.state.preferences.wake_word_sensitivity is not None:
+            self.state.oww_probability_cutoff = float(self.state.preferences.wake_word_sensitivity)
+            _LOGGER.debug("Loaded wake word sensitivity from preferences: %s", self.state.oww_probability_cutoff)
+        else:
+            _LOGGER.debug("Using default wake word sensitivity: 0.7")
+
         sensitivity_number_entity.sync_with_state()
 
 
@@ -194,7 +202,9 @@ class VoiceSatelliteProtocol(APIServer):
 
     def _set_sensitivity(self, new_value: float) -> None:
         self.state.oww_probability_cutoff = float(new_value)
+        self.state.preferences.wake_word_sensitivity = float(new_value)
         _LOGGER.debug("Sensitivity value set to: %s", new_value)
+        self.state.save_preferences()
 
     def _set_muted(self, new_state: bool) -> None:
         self.state.muted = bool(new_state)
