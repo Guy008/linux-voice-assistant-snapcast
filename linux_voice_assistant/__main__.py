@@ -17,7 +17,8 @@ from getmac import get_mac_address  # type: ignore
 from pymicro_wakeword import MicroWakeWord, MicroWakeWordFeatures
 from pyopen_wakeword import OpenWakeWord, OpenWakeWordFeatures
 
-from .models import AvailableWakeWord, Preferences, ServerState, WakeWordType
+from .models import Preferences, ServerState
+from .wake_word import find_available_wake_words, load_wake_models, load_stop_model
 from .mpv_player import MpvMediaPlayer
 from .satellite import VoiceSatelliteProtocol
 from .util import (
@@ -239,32 +240,7 @@ async def main() -> None:
     # Load available wake words
     wake_word_dirs = [Path(ww_dir) for ww_dir in args.wake_word_dir]
     wake_word_dirs.append(args.download_dir / "external_wake_words")
-    available_wake_words: Dict[str, AvailableWakeWord] = {}
-
-    for wake_word_dir in wake_word_dirs:
-        for model_config_path in wake_word_dir.glob("*.json"):
-            model_id = model_config_path.stem
-            if model_id == args.stop_model:
-                # Don't show stop model as an available wake word
-                continue
-
-            with open(model_config_path, "r", encoding="utf-8") as model_config_file:
-                model_config = json.load(model_config_file)
-                model_type = WakeWordType(model_config["type"])
-                if model_type == WakeWordType.OPEN_WAKE_WORD:
-                    wake_word_path = model_config_path.parent / model_config["model"]
-                else:
-                    wake_word_path = model_config_path
-
-                available_wake_words[model_id] = AvailableWakeWord(
-                    id=model_id,
-                    type=WakeWordType(model_type),
-                    wake_word=model_config["wake_word"],
-                    trained_languages=model_config.get("trained_languages", []),
-                    wake_word_path=wake_word_path,
-                )
-
-    _LOGGER.debug("Available wake words: %s", list(sorted(available_wake_words.keys())))
+    available_wake_words = find_available_wake_words(wake_word_dirs, args.stop_model)
 
     # Load preferences
     preferences_path = Path(args.preferences_file)
@@ -285,40 +261,14 @@ async def main() -> None:
         preferences.thinking_sound = 1
 
     # Load wake/stop models
-    active_wake_words: Set[str] = set()
-    wake_models: Dict[str, Union[MicroWakeWord, OpenWakeWord]] = {}
-    if preferences.active_wake_words:
-        # Load preferred models
-        for wake_word_id in preferences.active_wake_words:
-            wake_word = available_wake_words.get(wake_word_id)
-            if wake_word is None:
-                _LOGGER.warning("Unrecognized wake word id: %s", wake_word_id)
-                continue
-
-            _LOGGER.debug("Loading wake model: %s", wake_word_id)
-            wake_models[wake_word_id] = wake_word.load()
-            active_wake_words.add(wake_word_id)
-
-    if not wake_models:
-        # Load default model
-        wake_word_id = args.wake_model
-        wake_word = available_wake_words[wake_word_id]
-
-        _LOGGER.debug("Loading wake model: %s", wake_word_id)
-        wake_models[wake_word_id] = wake_word.load()
-        active_wake_words.add(wake_word_id)
+    wake_models, active_wake_words = load_wake_models(
+        available_wake_words,
+        preferences.active_wake_words,
+        args.wake_model
+    )
 
     # TODO: allow openWakeWord for "stop"
-    stop_model: Optional[MicroWakeWord] = None
-    for wake_word_dir in wake_word_dirs:
-        stop_config_path = wake_word_dir / f"{args.stop_model}.json"
-        if not stop_config_path.exists():
-            continue
-
-        _LOGGER.debug("Loading stop model: %s", stop_config_path)
-        stop_model = MicroWakeWord.from_config(stop_config_path)
-        break
-
+    stop_model = load_stop_model(wake_word_dirs, args.stop_model)
     assert stop_model is not None
 
     state = ServerState(
