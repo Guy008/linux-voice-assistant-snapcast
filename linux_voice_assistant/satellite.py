@@ -45,7 +45,14 @@ from pymicro_wakeword import MicroWakeWord
 from pyopen_wakeword import OpenWakeWord
 
 from .api_server import APIServer
-from .entity import MediaPlayerEntity, MuteSwitchEntity, ThinkingSoundEntity, WakeWordSensitivityNumberEntity
+from .entity import (
+    MediaPlayerEntity,
+    MuteSwitchEntity,
+    ThinkingSoundEntity,
+    WakeWord1SensitivityNumberEntity,
+    WakeWord2SensitivityNumberEntity,
+    StopWordSensitivityNumberEntity,
+)
 from .models import AvailableWakeWord, ServerState, WakeWordType
 from .util import call_all
 
@@ -148,35 +155,97 @@ class VoiceSatelliteProtocol(APIServer):
         thinking_sound_switch.update_set_thinking_sound_enabled(self._set_thinking_sound_enabled)
         thinking_sound_switch.sync_with_state()
 
-        # Add/update sensitivity number entity
-        sensitivity_number_entity = self.state.sensitivity_number_entity
-        if sensitivity_number_entity is None:
-            sensitivity_number_entity = WakeWordSensitivityNumberEntity(
+        # Add/update Wake Word 1 sensitivity number entity
+        sensitivity_1_entity = self.state.sensitivity_1_number_entity
+        if sensitivity_1_entity is None:
+            sensitivity_1_entity = WakeWord1SensitivityNumberEntity(
                 server=self,
                 key=len(state.entities),
-                name="Wake Word Sensitivity",
-                object_id="wake_word_sensitivity",
+                name="Wake Word 1 Sensitivity",
+                object_id="wake_word_1_sensitivity",
                 get_sensitivity=lambda: self.state.oww_probability_cutoff,
-                set_sensitivity=self._set_sensitivity,
+                set_sensitivity=self._set_sensitivity_1,
                 initial_value=self.state.oww_probability_cutoff,
             )
-            self.state.entities.append(sensitivity_number_entity)
-            self.state.sensitivity_number_entity = sensitivity_number_entity
-        elif sensitivity_number_entity not in self.state.entities:
-            self.state.entities.append(sensitivity_number_entity)
+            self.state.entities.append(sensitivity_1_entity)
+            self.state.sensitivity_1_number_entity = sensitivity_1_entity
+        elif sensitivity_1_entity not in self.state.entities:
+            self.state.entities.append(sensitivity_1_entity)
 
-        sensitivity_number_entity.server = self
-        sensitivity_number_entity.update_get_sensitivity(lambda: self.state.oww_probability_cutoff)
-        sensitivity_number_entity.update_set_sensitivity(self._set_sensitivity)
+        sensitivity_1_entity.server = self
+        sensitivity_1_entity.update_get_sensitivity(lambda: self.state.oww_probability_cutoff)
+        sensitivity_1_entity.update_set_sensitivity(self._set_sensitivity_1)
 
-        # Load sensitivity value from preferences (default to 0.7 if not set)
-        if self.state.preferences.wake_word_sensitivity is not None:
-            self.state.oww_probability_cutoff = float(self.state.preferences.wake_word_sensitivity)
-            _LOGGER.debug("Loaded wake word sensitivity from preferences: %s", self.state.oww_probability_cutoff)
+        # Load Wake Word 1 sensitivity value from preferences (default to 0.7 if not set)
+        if self.state.preferences.wake_word_1_sensitivity is not None:
+            self.state.oww_probability_cutoff = float(self.state.preferences.wake_word_1_sensitivity)
+            _LOGGER.debug("Loaded Wake Word 1 sensitivity from preferences: %s", self.state.oww_probability_cutoff)
         else:
-            _LOGGER.debug("Using default wake word sensitivity: 0.7")
+            _LOGGER.debug("Using default Wake Word 1 sensitivity: 0.7")
 
-        sensitivity_number_entity.sync_with_state()
+        sensitivity_1_entity.sync_with_state()
+
+
+        # Add/update Wake Word 2 sensitivity number entity
+        sensitivity_2_entity = self.state.sensitivity_2_number_entity
+        if sensitivity_2_entity is None:
+            sensitivity_2_entity = WakeWord2SensitivityNumberEntity(
+                server=self,
+                key=len(state.entities),
+                name="Wake Word 2 Sensitivity",
+                object_id="wake_word_2_sensitivity",
+                get_sensitivity=lambda: self.state.oww_second_probability_cutoff,
+                set_sensitivity=self._set_sensitivity_2,
+                initial_value=self.state.oww_second_probability_cutoff,
+            )
+            self.state.entities.append(sensitivity_2_entity)
+            self.state.sensitivity_2_number_entity = sensitivity_2_entity
+        elif sensitivity_2_entity not in self.state.entities:
+            self.state.entities.append(sensitivity_2_entity)
+
+        sensitivity_2_entity.server = self
+        sensitivity_2_entity.update_get_sensitivity(lambda: self.state.oww_second_probability_cutoff)
+        sensitivity_2_entity.update_set_sensitivity(self._set_sensitivity_2)
+
+        # Load Wake Word 2 sensitivity value from preferences (default to 0.7 if not set)
+        if self.state.preferences.wake_word_2_sensitivity is not None:
+            self.state.oww_second_probability_cutoff = float(self.state.preferences.wake_word_2_sensitivity)
+            _LOGGER.debug("Loaded Wake Word 2 sensitivity from preferences: %s", self.state.oww_second_probability_cutoff)
+        else:
+            _LOGGER.debug("Using default Wake Word 2 sensitivity: 0.7")
+
+        sensitivity_2_entity.sync_with_state()
+
+
+        # Add/update Stop Word sensitivity number entity
+        stop_sensitivity_entity = self.state.stop_sensitivity_number_entity
+        if stop_sensitivity_entity is None:
+            stop_sensitivity_entity = StopWordSensitivityNumberEntity(
+                server=self,
+                key=len(state.entities),
+                name="Stop Word Sensitivity",
+                object_id="stop_word_sensitivity",
+                get_sensitivity=lambda: self.state.oww_stop_probability_cutoff,
+                set_sensitivity=self._set_stop_sensitivity,
+                initial_value=self.state.oww_stop_probability_cutoff,
+            )
+            self.state.entities.append(stop_sensitivity_entity)
+            self.state.stop_sensitivity_number_entity = stop_sensitivity_entity
+        elif stop_sensitivity_entity not in self.state.entities:
+            self.state.entities.append(stop_sensitivity_entity)
+
+        stop_sensitivity_entity.server = self
+        stop_sensitivity_entity.update_get_sensitivity(lambda: self.state.oww_stop_probability_cutoff)
+        stop_sensitivity_entity.update_set_sensitivity(self._set_stop_sensitivity)
+
+        # Load Stop Word sensitivity value from preferences (default to 0.7 if not set)
+        if self.state.preferences.stop_word_sensitivity is not None:
+            self.state.oww_stop_probability_cutoff = float(self.state.preferences.stop_word_sensitivity)
+            _LOGGER.debug("Loaded Stop Word sensitivity from preferences: %s", self.state.oww_stop_probability_cutoff)
+        else:
+            _LOGGER.debug("Using default Stop Word sensitivity: 0.7")
+
+        stop_sensitivity_entity.sync_with_state()
 
 
         self._is_streaming_audio = False
@@ -199,12 +268,25 @@ class VoiceSatelliteProtocol(APIServer):
             _LOGGER.debug("Thinking sound disabled")
             pass
         self.state.save_preferences()
-
-    def _set_sensitivity(self, new_value: float) -> None:
+        
+    def _set_sensitivity_1(self, new_value: float) -> None:
         self.state.oww_probability_cutoff = float(new_value)
-        self.state.preferences.wake_word_sensitivity = float(new_value)
-        _LOGGER.debug("Sensitivity value set to: %s", new_value)
+        self.state.preferences.wake_word_1_sensitivity = float(new_value)
+        _LOGGER.debug("Wake Word 1 Sensitivity value set to: %s", new_value)
         self.state.save_preferences()
+
+    def _set_sensitivity_2(self, new_value: float) -> None:
+        self.state.oww_second_probability_cutoff = float(new_value)
+        self.state.preferences.wake_word_2_sensitivity = float(new_value)
+        _LOGGER.debug("Wake Word 2 Sensitivity value set to: %s", new_value)
+        self.state.save_preferences()
+
+    def _set_stop_sensitivity(self, new_value: float) -> None:
+        self.state.oww_stop_probability_cutoff = float(new_value)
+        self.state.preferences.stop_word_sensitivity = float(new_value)
+        _LOGGER.debug("Stop Word Sensitivity value set to: %s", new_value)
+        self.state.save_preferences()
+
 
     def _set_muted(self, new_state: bool) -> None:
         self.state.muted = bool(new_state)

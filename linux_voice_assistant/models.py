@@ -17,7 +17,9 @@ if TYPE_CHECKING:
         MediaPlayerEntity,
         MuteSwitchEntity,
         ThinkingSoundEntity,
-        WakeWordSensitivityNumberEntity,
+        WakeWord1SensitivityNumberEntity,
+        WakeWord2SensitivityNumberEntity,
+        StopWordSensitivityNumberEntity,
     )
     from .mpv_player import MpvMediaPlayer
     from .satellite import VoiceSatelliteProtocol
@@ -60,7 +62,9 @@ class Preferences:
     active_wake_words: List[str] = field(default_factory=list)
     volume: Optional[float] = None
     thinking_sound: int = 0  # 0 = disabled, 1 = enabled
-    wake_word_sensitivity: Optional[float] = None
+    wake_word_1_sensitivity: Optional[float] = None
+    wake_word_2_sensitivity: Optional[float] = None
+    stop_word_sensitivity: Optional[float] = None
 
 
 @dataclass
@@ -93,7 +97,9 @@ class ServerState:
     satellite: "Optional[VoiceSatelliteProtocol]" = None
     mute_switch_entity: "Optional[MuteSwitchEntity]" = None
     thinking_sound_entity: "Optional[ThinkingSoundEntity]" = None
-    sensitivity_number_entity: "Optional[WakeWordSensitivityNumberEntity]" = None
+    sensitivity_1_number_entity: "Optional[WakeWord1SensitivityNumberEntity]" = None
+    sensitivity_2_number_entity: "Optional[WakeWord2SensitivityNumberEntity]" = None
+    stop_sensitivity_number_entity: "Optional[StopWordSensitivityNumberEntity]" = None
     wake_words_changed: bool = False
     refractory_seconds: float = 2.0
     thinking_sound_enabled: bool = False
@@ -102,6 +108,8 @@ class ServerState:
     volume: float = 1.0
     wake_word_sensitivity: str = "Slightly sensitive"
     oww_probability_cutoff: float = 0.7  # Dynamic threshold for OpenWakeWord
+    oww_second_probability_cutoff: float = 0.7  # Dynamic threshold for second OpenWakeWord
+    oww_stop_probability_cutoff: float = 0.7  # Dynamic threshold for Stop word
 
     def save_preferences(self) -> None:
         """Save preferences as JSON."""
