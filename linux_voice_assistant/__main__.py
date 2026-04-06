@@ -382,27 +382,31 @@ def process_audio(state: ServerState, mic, block_size: int):
                     state.wake_words_changed = False
                     wake_words = [ww for ww in state.wake_words.values() if ww.id in state.active_wake_words]
 
+                    # Load default stop word value from json into state and preferences is still TODO.
+
                     has_oww = False
                     for idx, wake_word in enumerate(wake_words):
+
+                        # Load default threshold from model json
+                        wake_word_id = wake_word.id if hasattr(wake_word, 'id') else next(iter(state.wake_words.keys()))
+                        available_word = state.available_wake_words.get(wake_word_id)
+                        default_threshold = available_word.probability_cutoff if available_word else 0.7
+                        _LOGGER.debug("Using default threshold %.3f for wake word '%s' from model config", default_threshold, wake_word_id)
+                        # Check preferences override
+                        if idx == 0:
+                            old_val = state.wake_word_1_threshold
+                            state.wake_word_1_threshold = state.preferences.wake_word_1_sensitivity if state.preferences.wake_word_1_sensitivity is not None else default_threshold
+                            _LOGGER.debug("Wake Word 1 threshold set to %.3f (was %.3f, preferences: %s)",
+                                            state.wake_word_1_threshold, old_val, state.preferences.wake_word_1_sensitivity)
+                        elif idx == 1:
+                            old_val = state.wake_word_2_threshold
+                            state.wake_word_2_threshold = state.preferences.wake_word_2_sensitivity if state.preferences.wake_word_2_sensitivity is not None else default_threshold
+                            _LOGGER.debug("Wake Word 2 threshold set to %.3f (was %.3f, preferences: %s)",
+                                            state.wake_word_2_threshold, old_val, state.preferences.wake_word_2_sensitivity)
+
                         if isinstance(wake_word, OpenWakeWord):
                             has_oww = True
-                            # Load default threshold from model json
-                            wake_word_id = wake_word.id if hasattr(wake_word, 'id') else next(iter(state.wake_words.keys()))
-                            available_word = state.available_wake_words.get(wake_word_id)
-                            default_threshold = available_word.probability_cutoff if available_word else 0.7
-                            _LOGGER.debug("Using default threshold %.3f for wake word '%s' from model config", default_threshold, wake_word_id)
-                            # Check preferences override
-                            if idx == 0:
-                                old_val = state.wake_word_1_threshold
-                                state.wake_word_1_threshold = state.preferences.wake_word_1_sensitivity if state.preferences.wake_word_1_sensitivity is not None else default_threshold
-                                _LOGGER.debug("Wake Word 1 threshold set to %.3f (was %.3f, preferences: %s)",
-                                              state.wake_word_1_threshold, old_val, state.preferences.wake_word_1_sensitivity)
-                            elif idx == 1:
-                                old_val = state.wake_word_2_threshold
-                                state.wake_word_2_threshold = state.preferences.wake_word_2_sensitivity if state.preferences.wake_word_2_sensitivity is not None else default_threshold
-                                _LOGGER.debug("Wake Word 2 threshold set to %.3f (was %.3f, preferences: %s)",
-                                              state.wake_word_2_threshold, old_val, state.preferences.wake_word_2_sensitivity)
-
+                    
                     if micro_features is None:
                         micro_features = MicroWakeWordFeatures()
 

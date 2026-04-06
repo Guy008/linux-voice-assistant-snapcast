@@ -238,12 +238,12 @@ class VoiceSatelliteProtocol(APIServer):
         stop_sensitivity_entity.update_get_sensitivity(lambda: self.state.oww_stop_probability_cutoff)
         stop_sensitivity_entity.update_set_sensitivity(self._set_stop_sensitivity)
 
-        # Load Stop Word sensitivity value from preferences (default to 0.7 if not set)
+        # Load Stop Word sensitivity value from preferences (default to 0.5 if not set)
         if self.state.preferences.stop_word_sensitivity is not None:
             self.state.oww_stop_probability_cutoff = float(self.state.preferences.stop_word_sensitivity)
             _LOGGER.debug("Loaded Stop Word sensitivity from preferences: %s", self.state.oww_stop_probability_cutoff)
         else:
-            _LOGGER.debug("Using default Stop Word sensitivity: 0.7")
+            _LOGGER.debug("Using default Stop Word sensitivity")
 
         stop_sensitivity_entity.sync_with_state()
 
