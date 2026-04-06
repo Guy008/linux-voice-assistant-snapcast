@@ -402,7 +402,7 @@ class WakeWord1SensitivityNumberEntity(ESPHomeEntity):
                 icon="mdi:microphone-sensitivity",
                 min_value=0.0,
                 max_value=1.0,
-                step=0.01,
+                step=0.001,
                 mode=NumberMode.BOX,
             )
         elif isinstance(msg, SubscribeHomeAssistantStatesRequest):
@@ -456,7 +456,7 @@ class WakeWord2SensitivityNumberEntity(ESPHomeEntity):
                 icon="mdi:microphone-sensitivity-high",
                 min_value=0.0,
                 max_value=1.0,
-                step=0.01,
+                step=0.001,
                 mode=NumberMode.BOX,
             )
         elif isinstance(msg, SubscribeHomeAssistantStatesRequest):
@@ -510,7 +510,7 @@ class StopWordSensitivityNumberEntity(ESPHomeEntity):
                 icon="mdi:hand-back-left",
                 min_value=0.0,
                 max_value=1.0,
-                step=0.01,
+                step=0.001,
                 mode=NumberMode.BOX,
             )
         elif isinstance(msg, SubscribeHomeAssistantStatesRequest):
