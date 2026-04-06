@@ -386,8 +386,11 @@ def process_audio(state: ServerState, mic, block_size: int):
                     for idx, wake_word in enumerate(wake_words):
                         if isinstance(wake_word, OpenWakeWord):
                             has_oww = True
-                            # Load default threshold from model
-                            default_threshold = 0.7
+                            # Load default threshold from model json
+                            wake_word_id = wake_word.id if hasattr(wake_word, 'id') else next(iter(state.wake_words.keys()))
+                            available_word = state.available_wake_words.get(wake_word_id)
+                            default_threshold = available_word.probability_cutoff if available_word else 0.7
+                            _LOGGER.debug("Using default threshold %.3f for wake word '%s' from model config", default_threshold, wake_word_id)
                             # Check preferences override
                             if idx == 0:
                                 old_val = state.wake_word_1_threshold
