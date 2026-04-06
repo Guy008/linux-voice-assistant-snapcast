@@ -405,16 +405,29 @@ def process_audio(state: ServerState, mic, block_size: int):
                         oww_inputs.clear()
                         oww_inputs.extend(oww_features.process_streaming(audio_chunk))
 
-                    for wake_word in wake_words:
+                    for wake_word_index, wake_word in enumerate(wake_words):
                         activated = False
                         if isinstance(wake_word, MicroWakeWord):
                             for micro_input in micro_inputs:
                                 if wake_word.process_streaming(micro_input):
                                     activated = True
                         elif isinstance(wake_word, OpenWakeWord):
+                            # Use matching sensitivity depending on first or second wake word
+                            threshold = 0.5
+                            if wake_word_index == 0:
+                                # First wake word: use configured sensitivity 1, fallback 0.5
+                                threshold = state.preferences.wake_word_1_sensitivity if state.preferences.wake_word_1_sensitivity is not None else 0.5
+                            elif wake_word_index == 1:
+                                # Second wake word: use configured sensitivity 2, fallback 0.5
+                                threshold = state.preferences.wake_word_2_sensitivity if state.preferences.wake_word_2_sensitivity is not None else 0.5
+                            
                             for oww_input in oww_inputs:
                                 for prob in wake_word.process_streaming(oww_input):
-                                    if prob > 0.5:
+                                    _LOGGER.debug("Wake word '%s' (index %d) detection probability: %.3f, threshold: %.3f",
+                                                  wake_word.wake_word, wake_word_index, prob, threshold)
+                                    if prob > threshold:
+                                        _LOGGER.debug("Wake word '%s' activated (probability %.3f exceeded threshold %.3f)",
+                                                      wake_word.wake_word, prob, threshold)
                                         activated = True
 
                         if activated and not state.muted:
