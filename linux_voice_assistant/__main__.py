@@ -423,23 +423,34 @@ def process_audio(state: ServerState, mic, block_size: int):
 
                     for wake_word_index, wake_word in enumerate(wake_words):
                         activated = False
+
+                        # Set dynamic threshold depending on wake word index
+                        if wake_word_index == 0:
+                            threshold = state.wake_word_1_threshold
+                            #_LOGGER.debug("Set wake word %d probability cutoff to %.3f", wake_word_index+1, state.wake_word_1_threshold)
+                        elif wake_word_index == 1:
+                            threshold = state.wake_word_2_threshold
+                            #_LOGGER.debug("Set wake word %d probability cutoff to %.3f", wake_word_index+1, state.wake_word_2_threshold)
+                        else:
+                            threshold = 0.7
+                            #_LOGGER.debug("Set wake word %d probability cutoff to fallback value 0.7", wake_word_index+1)
+
                         if isinstance(wake_word, MicroWakeWord):
+                            # No debugging when no detection
+                            wake_word.debug_probabilities = False
+                            
+                            # set microWakeWord cutoff
+                            wake_word.probability_cutoff = threshold
+
                             for micro_input in micro_inputs:
                                 if wake_word.process_streaming(micro_input):
+                                    wake_word.debug_probabilities = True
                                     activated = True
                         elif isinstance(wake_word, OpenWakeWord):
-                            # Use matching sensitivity depending on first or second wake word
-                            threshold = 0.7
-                            if wake_word_index == 0:
-                                threshold = state.wake_word_1_threshold
-                            elif wake_word_index == 1:
-                                threshold = state.wake_word_2_threshold
-                            
                             for oww_input in oww_inputs:
                                 for prob in wake_word.process_streaming(oww_input):
                                     if prob > threshold:
-                                        _LOGGER.debug("Wake word '%s' activated (probability %.3f exceeded threshold %.3f)",
-                                                      wake_word.wake_word, prob, threshold)
+                                        _LOGGER.debug("Wake word '%s' activated (probability %.3f exceeded threshold %.3f)", wake_word.wake_word, prob, threshold)
                                         activated = True
 
                         if activated and not state.muted:
@@ -451,8 +462,16 @@ def process_audio(state: ServerState, mic, block_size: int):
 
                     # Always process to keep state correct
                     stopped = False
+
+                    # No debugging when no detection
+                    state.stop_word.debug_probabilities = False
+
+                    # Apply stop word sensitivity threshold
+                    state.stop_word.probability_cutoff = state.stop_word_threshold
+                    #_LOGGER.debug("Set stop word probability cutoff to %.3f", state.stop_word_threshold)
                     for micro_input in micro_inputs:
                         if state.stop_word.process_streaming(micro_input):
+                            state.stop_word.debug_probabilities = True
                             stopped = True
 
                     if stopped and (state.stop_word.id in state.active_wake_words) and not state.muted:
