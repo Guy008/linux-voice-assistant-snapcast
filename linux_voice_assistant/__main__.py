@@ -417,14 +417,14 @@ def process_audio(state: ServerState, mic, block_size: int):
                             if wake_word_index == 0:
                                 # First wake word: use configured sensitivity 1, fallback 0.5
                                 threshold = state.preferences.wake_word_1_sensitivity if state.preferences.wake_word_1_sensitivity is not None else 0.5
+                                #_LOGGER.debug("Using threshold %.3f for first wake word (index 0)", threshold)
                             elif wake_word_index == 1:
                                 # Second wake word: use configured sensitivity 2, fallback 0.5
                                 threshold = state.preferences.wake_word_2_sensitivity if state.preferences.wake_word_2_sensitivity is not None else 0.5
+                                #_LOGGER.debug("Using threshold %.3f for second wake word (index 1)", threshold)
                             
                             for oww_input in oww_inputs:
                                 for prob in wake_word.process_streaming(oww_input):
-                                    _LOGGER.debug("Wake word '%s' (index %d) detection probability: %.3f, threshold: %.3f",
-                                                  wake_word.wake_word, wake_word_index, prob, threshold)
                                     if prob > threshold:
                                         _LOGGER.debug("Wake word '%s' activated (probability %.3f exceeded threshold %.3f)",
                                                       wake_word.wake_word, prob, threshold)
