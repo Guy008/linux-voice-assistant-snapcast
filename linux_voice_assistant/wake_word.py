@@ -15,34 +15,48 @@ _LOGGER = logging.getLogger(__name__)
 
 def find_available_wake_words(wake_word_dirs: List[Path], stop_model_id: str) -> Dict[str, AvailableWakeWord]:
     """
-    Sucht alle verfügbaren Wake Words in den angegebenen Verzeichnissen.
-    Lädt Konfigurationen und erstellt AvailableWakeWord Objekte.
+    Searches all available wake words in the specified directories.
+    Loads configurations and creates AvailableWakeWord objects.
     
     Args:
-        wake_word_dirs: Liste mit Verzeichnissen in denen nach Wake Words gesucht wird
-        stop_model_id: ID des Stop-Modells welches nicht als verfügbares Wake Word angezeigt wird
+        wake_word_dirs: List of directories to search for wake words
+        stop_model_id: ID of the stop model which will not be listed as available wake word
         
     Returns:
-        Dictionary mit Wake Word ID als Schlüssel und AvailableWakeWord Objekt als Wert
+        Dictionary with wake word ID as key and AvailableWakeWord object as value
     """
     available_wake_words: Dict[str, AvailableWakeWord] = {}
     
+    _LOGGER.debug("Searching for wake words in directories: %s", [str(d) for d in wake_word_dirs])
+    
     for wake_word_dir in wake_word_dirs:
-        for model_config_path in wake_word_dir.glob("*.json"):
+        _LOGGER.debug("Checking directory: %s (exists: %s)", wake_word_dir, wake_word_dir.exists())
+        
+        config_files = list(wake_word_dir.glob("*.json"))
+        _LOGGER.debug("Found %d JSON configuration files in %s", len(config_files), wake_word_dir)
+        
+        for model_config_path in config_files:
+            _LOGGER.debug("Processing configuration file: %s", model_config_path)
+            
             model_id = model_config_path.stem
             if model_id == stop_model_id:
-                # Stop Modell nicht als verfügbares Wake Word anzeigen
+                # Skip stop model, do not show as available wake word
+                _LOGGER.debug("Skipping stop model: %s", model_id)
                 continue
                 
             with open(model_config_path, "r", encoding="utf-8") as model_config_file:
                 model_config = json.load(model_config_file)
                 model_type = WakeWordType(model_config["type"])
                 
+                _LOGGER.debug("Model %s is of type: %s", model_id, model_type)
+                
                 if model_type == WakeWordType.OPEN_WAKE_WORD:
                     wake_word_path = model_config_path.parent / model_config["model"]
                 else:
                     wake_word_path = model_config_path
                     
+                _LOGGER.debug("Model path resolved to: %s (exists: %s)", wake_word_path, wake_word_path.exists())
+                
                 available_wake_words[model_id] = AvailableWakeWord(
                     id=model_id,
                     type=WakeWordType(model_type),
@@ -50,8 +64,10 @@ def find_available_wake_words(wake_word_dirs: List[Path], stop_model_id: str) ->
                     trained_languages=model_config.get("trained_languages", []),
                     wake_word_path=wake_word_path,
                 )
+                _LOGGER.debug("Successfully registered wake word: %s", model_id)
                 
-    _LOGGER.debug("Verfügbare Wake Words: %s", list(sorted(available_wake_words.keys())))
+    _LOGGER.debug("Total available wake words found: %d", len(available_wake_words))
+    _LOGGER.debug("Available wake words: %s", list(sorted(available_wake_words.keys())))
     return available_wake_words
 
 
@@ -61,62 +77,87 @@ def load_wake_models(
     default_wake_word_id: str
 ) -> tuple[Dict[str, Union[MicroWakeWord, OpenWakeWord]], Set[str]]:
     """
-    Lädt die angegebenen Wake Word Modelle.
+    Loads the specified wake word models.
     
-    Wenn keine aktiven Wake Words angegeben sind wird das Standard Modell geladen.
+    If no active wake words are provided, the default model will be loaded.
     
     Args:
-        available_wake_words: Dictionary mit allen verfügbaren Wake Words
-        active_wake_word_ids: Liste mit IDs der zu ladenden Wake Words (kann None sein)
-        default_wake_word_id: ID des Standard Modells welches geladen wird wenn keine anderen angegeben sind
+        available_wake_words: Dictionary with all available wake words
+        active_wake_word_ids: List of IDs of wake words to load (may be None)
+        default_wake_word_id: ID of the default model which is loaded if no others are specified
         
     Returns:
-        Tuple mit (Dictionary der geladenen Modelle, Set der aktiven Wake Word IDs)
+        Tuple with (Dictionary of loaded models, Set of active wake word IDs)
     """
     active_wake_words: Set[str] = set()
     wake_models: Dict[str, Union[MicroWakeWord, OpenWakeWord]] = {}
     
+    _LOGGER.debug("Requested active wake word ids: %s", active_wake_word_ids)
+    _LOGGER.debug("Default wake word id: %s", default_wake_word_id)
+    
     if active_wake_word_ids:
-        # Bevorzugte Modelle laden
+        # Load preferred models
+        _LOGGER.debug("Loading requested wake word models")
         for wake_word_id in active_wake_word_ids:
             wake_word = available_wake_words.get(wake_word_id)
             if wake_word is None:
-                _LOGGER.warning("Unbekannte Wake Word ID: %s", wake_word_id)
+                _LOGGER.warning("Unknown wake word ID: %s", wake_word_id)
                 continue
                 
-            _LOGGER.debug("Lade Wake Modell: %s", wake_word_id)
-            wake_models[wake_word_id] = wake_word.load()
-            active_wake_words.add(wake_word_id)
+            _LOGGER.debug("Loading wake model: %s", wake_word_id)
+            try:
+                wake_models[wake_word_id] = wake_word.load()
+                active_wake_words.add(wake_word_id)
+                _LOGGER.debug("Successfully loaded wake model: %s", wake_word_id)
+            except Exception as ex:
+                _LOGGER.error("Failed to load wake model %s: %s", wake_word_id, ex, exc_info=True)
             
     if not wake_models:
-        # Standard Modell laden
+        # No models loaded, fall back to default model
+        _LOGGER.debug("No wake models loaded, falling back to default model")
         wake_word_id = default_wake_word_id
         wake_word = available_wake_words[wake_word_id]
         
-        _LOGGER.debug("Lade Wake Modell: %s", wake_word_id)
+        _LOGGER.debug("Loading default wake model: %s", wake_word_id)
         wake_models[wake_word_id] = wake_word.load()
         active_wake_words.add(wake_word_id)
+        _LOGGER.debug("Successfully loaded default wake model: %s", wake_word_id)
         
+    _LOGGER.debug("Loaded %d wake models successfully", len(wake_models))
+    _LOGGER.debug("Active wake words: %s", sorted(active_wake_words))
+    
     return wake_models, active_wake_words
 
 
 def load_stop_model(wake_word_dirs: List[Path], stop_model_id: str) -> Optional[MicroWakeWord]:
     """
-    Lädt das Stop Wort Modell.
+    Loads the stop word model.
     
     Args:
-        wake_word_dirs: Liste mit Verzeichnissen in denen nach dem Stop Modell gesucht wird
-        stop_model_id: ID des Stop Modells
+        wake_word_dirs: List of directories to search for the stop model
+        stop_model_id: ID of the stop model
         
     Returns:
-        Geladenes MicroWakeWord Objekt oder None falls nicht gefunden
+        Loaded MicroWakeWord object or None if not found
     """
+    _LOGGER.debug("Searching for stop model '%s' in directories: %s", stop_model_id, [str(d) for d in wake_word_dirs])
+    
     for wake_word_dir in wake_word_dirs:
         stop_config_path = wake_word_dir / f"{stop_model_id}.json"
+        _LOGGER.debug("Checking stop model path: %s (exists: %s)", stop_config_path, stop_config_path.exists())
+        
         if not stop_config_path.exists():
             continue
             
-        _LOGGER.debug("Lade Stop Modell: %s", stop_config_path)
-        return MicroWakeWord.from_config(stop_config_path)
+        _LOGGER.debug("Found stop model configuration at: %s", stop_config_path)
+        _LOGGER.debug("Loading stop model: %s", stop_config_path)
         
+        try:
+            model = MicroWakeWord.from_config(stop_config_path)
+            _LOGGER.debug("Successfully loaded stop model")
+            return model
+        except Exception as ex:
+            _LOGGER.error("Failed to load stop model from %s: %s", stop_config_path, ex, exc_info=True)
+            
+    _LOGGER.warning("Stop model '%s' could not be found in any search directory", stop_model_id)
     return None
