@@ -382,7 +382,7 @@ def process_audio(state: ServerState, mic, block_size: int):
                     state.wake_words_changed = False
                     wake_words = [ww for ww in state.wake_words.values() if ww.id in state.active_wake_words]
 
-                    # Load default stop word value from json into state and preferences is still TODO.
+                    # TODO: Load default stop word value from json into state and preferences missing.
 
                     has_oww = False
                     for idx, wake_word in enumerate(wake_words):
@@ -390,6 +390,7 @@ def process_audio(state: ServerState, mic, block_size: int):
                         # Load default threshold from model json
                         wake_word_id = wake_word.id if hasattr(wake_word, 'id') else next(iter(state.wake_words.keys()))
                         available_word = state.available_wake_words.get(wake_word_id)
+                        #_LOGGER.debug("word= %s", state.available_wake_words.get(wake_word_id))
                         default_threshold = available_word.probability_cutoff if available_word else 0.7
                         _LOGGER.debug("Using default threshold %.3f for wake word '%s' from model config", default_threshold, wake_word_id)
                         # Check preferences override
@@ -407,6 +408,8 @@ def process_audio(state: ServerState, mic, block_size: int):
                         if isinstance(wake_word, OpenWakeWord):
                             has_oww = True
                     
+                    # TODO: Save settings: At this moment settings are only saved when changed in the UI. Means that the default value can change while updating since its not saved in preferences.
+
                     if micro_features is None:
                         micro_features = MicroWakeWordFeatures()
 

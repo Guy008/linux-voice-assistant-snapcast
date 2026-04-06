@@ -57,13 +57,18 @@ def find_available_wake_words(wake_word_dirs: List[Path], stop_model_id: str) ->
                     
                 _LOGGER.debug("Model path resolved to: %s (exists: %s)", wake_word_path, wake_word_path.exists())
                 
+                # Get type specific configuration
+                type_config = model_config.get(model_type.value, {})
+                
+                _LOGGER.debug("Type specific config for %s (%s): %s", model_id, model_type.value, type_config)
+                
                 available_wake_words[model_id] = AvailableWakeWord(
                     id=model_id,
                     type=WakeWordType(model_type),
                     wake_word=model_config["wake_word"],
                     trained_languages=model_config.get("trained_languages", []),
                     wake_word_path=wake_word_path,
-                    probability_cutoff=model_config.get("probability_cutoff", 0.7),
+                    probability_cutoff=type_config.get("probability_cutoff", 0.7),
                 )
                 _LOGGER.debug("Successfully registered wake word: %s", model_id)
                 
