@@ -110,6 +110,10 @@ class ServerState:
     oww_probability_cutoff: float = 0.7  # Dynamic threshold for OpenWakeWord
     oww_second_probability_cutoff: float = 0.7  # Dynamic threshold for second OpenWakeWord
     oww_stop_probability_cutoff: float = 0.7  # Dynamic threshold for Stop word
+    
+    wake_word_1_threshold: float = 0.7
+    wake_word_2_threshold: float = 0.7
+    stop_word_threshold: float = 0.7
 
     def save_preferences(self) -> None:
         """Save preferences as JSON."""

@@ -383,9 +383,22 @@ def process_audio(state: ServerState, mic, block_size: int):
                     wake_words = [ww for ww in state.wake_words.values() if ww.id in state.active_wake_words]
 
                     has_oww = False
-                    for wake_word in wake_words:
+                    for idx, wake_word in enumerate(wake_words):
                         if isinstance(wake_word, OpenWakeWord):
                             has_oww = True
+                            # Load default threshold from model
+                            default_threshold = 0.7
+                            # Check preferences override
+                            if idx == 0:
+                                old_val = state.wake_word_1_threshold
+                                state.wake_word_1_threshold = state.preferences.wake_word_1_sensitivity if state.preferences.wake_word_1_sensitivity is not None else default_threshold
+                                _LOGGER.debug("Wake Word 1 threshold set to %.3f (was %.3f, preferences: %s)",
+                                              state.wake_word_1_threshold, old_val, state.preferences.wake_word_1_sensitivity)
+                            elif idx == 1:
+                                old_val = state.wake_word_2_threshold
+                                state.wake_word_2_threshold = state.preferences.wake_word_2_sensitivity if state.preferences.wake_word_2_sensitivity is not None else default_threshold
+                                _LOGGER.debug("Wake Word 2 threshold set to %.3f (was %.3f, preferences: %s)",
+                                              state.wake_word_2_threshold, old_val, state.preferences.wake_word_2_sensitivity)
 
                     if micro_features is None:
                         micro_features = MicroWakeWordFeatures()
@@ -413,15 +426,11 @@ def process_audio(state: ServerState, mic, block_size: int):
                                     activated = True
                         elif isinstance(wake_word, OpenWakeWord):
                             # Use matching sensitivity depending on first or second wake word
-                            threshold = 0.5
+                            threshold = 0.7
                             if wake_word_index == 0:
-                                # First wake word: use configured sensitivity 1, fallback 0.5
-                                threshold = state.preferences.wake_word_1_sensitivity if state.preferences.wake_word_1_sensitivity is not None else 0.5
-                                #_LOGGER.debug("Using threshold %.3f for first wake word (index 0)", threshold)
+                                threshold = state.wake_word_1_threshold
                             elif wake_word_index == 1:
-                                # Second wake word: use configured sensitivity 2, fallback 0.5
-                                threshold = state.preferences.wake_word_2_sensitivity if state.preferences.wake_word_2_sensitivity is not None else 0.5
-                                #_LOGGER.debug("Using threshold %.3f for second wake word (index 1)", threshold)
+                                threshold = state.wake_word_2_threshold
                             
                             for oww_input in oww_inputs:
                                 for prob in wake_word.process_streaming(oww_input):

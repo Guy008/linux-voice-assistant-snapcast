@@ -163,7 +163,7 @@ class VoiceSatelliteProtocol(APIServer):
                 key=len(state.entities),
                 name="Wake Word 1 Sensitivity",
                 object_id="wake_word_1_sensitivity",
-                get_sensitivity=lambda: self.state.oww_probability_cutoff,
+                get_sensitivity=lambda: self.state.wake_word_1_threshold,
                 set_sensitivity=self._set_sensitivity_1,
                 initial_value=self.state.oww_probability_cutoff,
             )
@@ -194,7 +194,7 @@ class VoiceSatelliteProtocol(APIServer):
                 key=len(state.entities),
                 name="Wake Word 2 Sensitivity",
                 object_id="wake_word_2_sensitivity",
-                get_sensitivity=lambda: self.state.oww_second_probability_cutoff,
+                get_sensitivity=lambda: self.state.wake_word_2_threshold,
                 set_sensitivity=self._set_sensitivity_2,
                 initial_value=self.state.oww_second_probability_cutoff,
             )
@@ -225,7 +225,7 @@ class VoiceSatelliteProtocol(APIServer):
                 key=len(state.entities),
                 name="Stop Word Sensitivity",
                 object_id="stop_word_sensitivity",
-                get_sensitivity=lambda: self.state.oww_stop_probability_cutoff,
+                get_sensitivity=lambda: self.state.stop_word_threshold,
                 set_sensitivity=self._set_stop_sensitivity,
                 initial_value=self.state.oww_stop_probability_cutoff,
             )
@@ -270,20 +270,23 @@ class VoiceSatelliteProtocol(APIServer):
         self.state.save_preferences()
         
     def _set_sensitivity_1(self, new_value: float) -> None:
-        self.state.oww_probability_cutoff = float(new_value)
+        self.state.wake_word_1_threshold = float(new_value)
         self.state.preferences.wake_word_1_sensitivity = float(new_value)
+        self.state.save_preferences()
         _LOGGER.debug("Wake Word 1 Sensitivity value set to: %s", new_value)
         self.state.save_preferences()
 
     def _set_sensitivity_2(self, new_value: float) -> None:
-        self.state.oww_second_probability_cutoff = float(new_value)
+        self.state.wake_word_2_threshold = float(new_value)
         self.state.preferences.wake_word_2_sensitivity = float(new_value)
+        self.state.save_preferences()
         _LOGGER.debug("Wake Word 2 Sensitivity value set to: %s", new_value)
         self.state.save_preferences()
 
     def _set_stop_sensitivity(self, new_value: float) -> None:
-        self.state.oww_stop_probability_cutoff = float(new_value)
+        self.state.stop_word_threshold = float(new_value)
         self.state.preferences.stop_word_sensitivity = float(new_value)
+        self.state.save_preferences()
         _LOGGER.debug("Stop Word Sensitivity value set to: %s", new_value)
         self.state.save_preferences()
 
