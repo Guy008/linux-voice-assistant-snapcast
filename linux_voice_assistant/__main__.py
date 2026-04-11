@@ -437,6 +437,24 @@ def process_audio(state: ServerState, mic, block_size: int):
                             _LOGGER.debug("  ✅ Stop Word entity now has value %.3f", state.satellite.state.stop_sensitivity_number_entity.value)
                         
                         _LOGGER.debug("All sensitivity entities synced successfully")
+                        
+                        # Force push new state to connected Home Assistant instance
+                        if state.satellite is not None:
+                            try:
+                                _LOGGER.debug("Pushing updated state values to Home Assistant")
+                                for entity in [
+                                    state.satellite.state.sensitivity_1_number_entity,
+                                    state.satellite.state.sensitivity_2_number_entity,
+                                    state.satellite.state.stop_sensitivity_number_entity
+                                ]:
+                                    if entity is not None:
+                                        from aioesphomeapi.api_pb2 import NumberStateResponse
+                                        state.satellite.send_messages([
+                                            NumberStateResponse(key=entity.key, state=entity.value)
+                                        ])
+                                        _LOGGER.debug("  → Pushed value %.3f for entity %d", entity.value, entity.key)
+                            except Exception as e:
+                                _LOGGER.debug("Could not push state (no client connected yet): %s", e)
                     
                     # TODO: Save settings: At this moment settings are only saved when changed in the UI. Means that the default value can change while updating since its not saved in preferences.
 

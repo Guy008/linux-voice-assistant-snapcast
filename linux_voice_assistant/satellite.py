@@ -177,6 +177,7 @@ class VoiceSatelliteProtocol(APIServer):
         sensitivity_1_entity.update_set_sensitivity(self._set_sensitivity_1)
         
         sensitivity_1_entity.sync_with_state()
+        _LOGGER.debug("INIT: Wake Word 1 entity initialized with value %.3f", sensitivity_1_entity.value)
 
 
         # Add/update Wake Word 2 sensitivity number entity
