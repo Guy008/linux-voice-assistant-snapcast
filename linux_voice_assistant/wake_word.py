@@ -103,20 +103,21 @@ def load_wake_models(
     
     if active_wake_word_ids:
         # Load preferred models
-        _LOGGER.debug("Loading requested wake word models")
-        for wake_word_id in active_wake_word_ids:
+        _LOGGER.debug("Loading requested wake word models, count: %d", len(active_wake_word_ids))
+        for index, wake_word_id in enumerate(active_wake_word_ids):
+            _LOGGER.debug("Processing wake word %d/%d: %s", index+1, len(active_wake_word_ids), wake_word_id)
             wake_word = available_wake_words.get(wake_word_id)
             if wake_word is None:
-                _LOGGER.warning("Unknown wake word ID: %s", wake_word_id)
+                _LOGGER.warning("Unknown wake word ID: %s - skipping", wake_word_id)
                 continue
                 
-            _LOGGER.debug("Loading wake model: %s", wake_word_id)
+            _LOGGER.debug("Loading wake model: %s (%s)", wake_word_id, wake_word.wake_word)
             try:
                 wake_models[wake_word_id] = wake_word.load()
                 active_wake_words.add(wake_word_id)
-                _LOGGER.debug("Successfully loaded wake model: %s", wake_word_id)
+                _LOGGER.debug("✅ Successfully loaded wake model: %s", wake_word_id)
             except Exception as ex:
-                _LOGGER.error("Failed to load wake model %s: %s", wake_word_id, ex, exc_info=True)
+                _LOGGER.error("❌ Failed to load wake model %s: %s", wake_word_id, ex, exc_info=True)
             
     if not wake_models:
         # No models loaded, fall back to default model
@@ -129,10 +130,11 @@ def load_wake_models(
         _LOGGER.debug("Loading default wake model 1: %s", wake_word_id)
         _LOGGER.debug("Loading default wake model 2: %s", wake_word_id2)
         wake_models[wake_word_id] = wake_word.load()
-        wake_models[wake_word_id2] = wake_word.load()
+        wake_models[wake_word_id2] = wake_word2.load()
         active_wake_words.add(wake_word_id)
         active_wake_words.add(wake_word_id2)
-        #_LOGGER.debug("Successfully loaded default wake model: %s", wake_word_id)
+        _LOGGER.debug("Successfully loaded default wake model 1: %s", wake_word_id)
+        _LOGGER.debug("Successfully loaded default wake model 2: %s", wake_word_id2)
         
     _LOGGER.debug("Loaded %d wake models successfully", len(wake_models))
     _LOGGER.debug("Active wake words: %s", sorted(active_wake_words))
