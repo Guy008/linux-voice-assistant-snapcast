@@ -396,17 +396,47 @@ def process_audio(state: ServerState, mic, block_size: int):
                         # Check preferences override
                         if idx == 0:
                             old_val = state.wake_word_1_threshold
-                            state.wake_word_1_threshold = state.preferences.wake_word_1_sensitivity if state.preferences.wake_word_1_sensitivity is not None else default_threshold
+                            if state.preferences.wake_word_1_sensitivity is not None:
+                                state.wake_word_1_threshold = state.preferences.wake_word_1_sensitivity
+                            else:
+                                state.wake_word_1_threshold = default_threshold
                             _LOGGER.debug("Wake Word 1 threshold set to %.3f (was %.3f, preferences: %s)",
                                             state.wake_word_1_threshold, old_val, state.preferences.wake_word_1_sensitivity)
                         elif idx == 1:
                             old_val = state.wake_word_2_threshold
-                            state.wake_word_2_threshold = state.preferences.wake_word_2_sensitivity if state.preferences.wake_word_2_sensitivity is not None else default_threshold
+                            if state.preferences.wake_word_2_sensitivity is not None:
+                                state.wake_word_2_threshold = state.preferences.wake_word_2_sensitivity
+                            else:
+                                state.wake_word_2_threshold = default_threshold
                             _LOGGER.debug("Wake Word 2 threshold set to %.3f (was %.3f, preferences: %s)",
                                             state.wake_word_2_threshold, old_val, state.preferences.wake_word_2_sensitivity)
 
                         if isinstance(wake_word, OpenWakeWord):
                             has_oww = True
+                    
+                    # Sync entity states after threshold values were updated
+                    if state.satellite is not None:
+                        _LOGGER.debug("Updating WebUI entities with new threshold values")
+                        
+                        # Wake Word 1
+                        if state.satellite.state.sensitivity_1_number_entity is not None:
+                            _LOGGER.debug("  → Syncing Wake Word 1 entity to value %.3f", state.wake_word_1_threshold)
+                            state.satellite.state.sensitivity_1_number_entity.sync_with_state()
+                            _LOGGER.debug("  ✅ Wake Word 1 entity now has value %.3f", state.satellite.state.sensitivity_1_number_entity.value)
+                        
+                        # Wake Word 2
+                        if state.satellite.state.sensitivity_2_number_entity is not None:
+                            _LOGGER.debug("  → Syncing Wake Word 2 entity to value %.3f", state.wake_word_2_threshold)
+                            state.satellite.state.sensitivity_2_number_entity.sync_with_state()
+                            _LOGGER.debug("  ✅ Wake Word 2 entity now has value %.3f", state.satellite.state.sensitivity_2_number_entity.value)
+                        
+                        # Stop Word
+                        if state.satellite.state.stop_sensitivity_number_entity is not None:
+                            _LOGGER.debug("  → Syncing Stop Word entity to value %.3f", state.stop_word_threshold)
+                            state.satellite.state.stop_sensitivity_number_entity.sync_with_state()
+                            _LOGGER.debug("  ✅ Stop Word entity now has value %.3f", state.satellite.state.stop_sensitivity_number_entity.value)
+                        
+                        _LOGGER.debug("All sensitivity entities synced successfully")
                     
                     # TODO: Save settings: At this moment settings are only saved when changed in the UI. Means that the default value can change while updating since its not saved in preferences.
 

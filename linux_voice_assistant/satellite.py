@@ -165,7 +165,7 @@ class VoiceSatelliteProtocol(APIServer):
                 object_id="wake_word_1_sensitivity",
                 get_sensitivity=lambda: self.state.wake_word_1_threshold,
                 set_sensitivity=self._set_sensitivity_1,
-                initial_value=self.state.oww_probability_cutoff,
+                initial_value=self.state.wake_word_1_threshold,
             )
             self.state.entities.append(sensitivity_1_entity)
             self.state.sensitivity_1_number_entity = sensitivity_1_entity
@@ -173,16 +173,9 @@ class VoiceSatelliteProtocol(APIServer):
             self.state.entities.append(sensitivity_1_entity)
 
         sensitivity_1_entity.server = self
-        sensitivity_1_entity.update_get_sensitivity(lambda: self.state.oww_probability_cutoff)
+        sensitivity_1_entity.update_get_sensitivity(lambda: self.state.wake_word_1_threshold)
         sensitivity_1_entity.update_set_sensitivity(self._set_sensitivity_1)
-
-        # Load Wake Word 1 sensitivity value from preferences (default to 0.7 if not set)
-        if self.state.preferences.wake_word_1_sensitivity is not None:
-            self.state.oww_probability_cutoff = float(self.state.preferences.wake_word_1_sensitivity)
-            _LOGGER.debug("Loaded Wake Word 1 sensitivity from preferences: %s", self.state.oww_probability_cutoff)
-        else:
-            _LOGGER.debug("Using default Wake Word 1 sensitivity: 0.7")
-
+        
         sensitivity_1_entity.sync_with_state()
 
 
@@ -196,7 +189,7 @@ class VoiceSatelliteProtocol(APIServer):
                 object_id="wake_word_2_sensitivity",
                 get_sensitivity=lambda: self.state.wake_word_2_threshold,
                 set_sensitivity=self._set_sensitivity_2,
-                initial_value=self.state.oww_second_probability_cutoff,
+                initial_value=self.state.wake_word_2_threshold,
             )
             self.state.entities.append(sensitivity_2_entity)
             self.state.sensitivity_2_number_entity = sensitivity_2_entity
@@ -204,16 +197,9 @@ class VoiceSatelliteProtocol(APIServer):
             self.state.entities.append(sensitivity_2_entity)
 
         sensitivity_2_entity.server = self
-        sensitivity_2_entity.update_get_sensitivity(lambda: self.state.oww_second_probability_cutoff)
+        sensitivity_2_entity.update_get_sensitivity(lambda: self.state.wake_word_2_threshold)
         sensitivity_2_entity.update_set_sensitivity(self._set_sensitivity_2)
-
-        # Load Wake Word 2 sensitivity value from preferences (default to 0.7 if not set)
-        if self.state.preferences.wake_word_2_sensitivity is not None:
-            self.state.oww_second_probability_cutoff = float(self.state.preferences.wake_word_2_sensitivity)
-            _LOGGER.debug("Loaded Wake Word 2 sensitivity from preferences: %s", self.state.oww_second_probability_cutoff)
-        else:
-            _LOGGER.debug("Using default Wake Word 2 sensitivity: 0.7")
-
+        
         sensitivity_2_entity.sync_with_state()
 
 
@@ -227,7 +213,7 @@ class VoiceSatelliteProtocol(APIServer):
                 object_id="stop_word_sensitivity",
                 get_sensitivity=lambda: self.state.stop_word_threshold,
                 set_sensitivity=self._set_stop_sensitivity,
-                initial_value=self.state.oww_stop_probability_cutoff,
+                initial_value=self.state.stop_word_threshold,
             )
             self.state.entities.append(stop_sensitivity_entity)
             self.state.stop_sensitivity_number_entity = stop_sensitivity_entity
@@ -235,16 +221,9 @@ class VoiceSatelliteProtocol(APIServer):
             self.state.entities.append(stop_sensitivity_entity)
 
         stop_sensitivity_entity.server = self
-        stop_sensitivity_entity.update_get_sensitivity(lambda: self.state.oww_stop_probability_cutoff)
+        stop_sensitivity_entity.update_get_sensitivity(lambda: self.state.stop_word_threshold)
         stop_sensitivity_entity.update_set_sensitivity(self._set_stop_sensitivity)
-
-        # Load Stop Word sensitivity value from preferences (default to 0.5 if not set)
-        if self.state.preferences.stop_word_sensitivity is not None:
-            self.state.oww_stop_probability_cutoff = float(self.state.preferences.stop_word_sensitivity)
-            _LOGGER.debug("Loaded Stop Word sensitivity from preferences: %s", self.state.oww_stop_probability_cutoff)
-        else:
-            _LOGGER.debug("Using default Stop Word sensitivity")
-
+        
         stop_sensitivity_entity.sync_with_state()
 
 
@@ -274,21 +253,27 @@ class VoiceSatelliteProtocol(APIServer):
         self.state.preferences.wake_word_1_sensitivity = float(new_value)
         self.state.save_preferences()
         _LOGGER.debug("Wake Word 1 Sensitivity value set to: %s", new_value)
-        self.state.save_preferences()
+        # Sync entity state
+        if self.state.sensitivity_1_number_entity is not None:
+            self.state.sensitivity_1_number_entity.sync_with_state()
 
     def _set_sensitivity_2(self, new_value: float) -> None:
         self.state.wake_word_2_threshold = float(new_value)
         self.state.preferences.wake_word_2_sensitivity = float(new_value)
         self.state.save_preferences()
         _LOGGER.debug("Wake Word 2 Sensitivity value set to: %s", new_value)
-        self.state.save_preferences()
+        # Sync entity state
+        if self.state.sensitivity_2_number_entity is not None:
+            self.state.sensitivity_2_number_entity.sync_with_state()
 
     def _set_stop_sensitivity(self, new_value: float) -> None:
         self.state.stop_word_threshold = float(new_value)
         self.state.preferences.stop_word_sensitivity = float(new_value)
         self.state.save_preferences()
         _LOGGER.debug("Stop Word Sensitivity value set to: %s", new_value)
-        self.state.save_preferences()
+        # Sync entity state
+        if self.state.stop_sensitivity_number_entity is not None:
+            self.state.stop_sensitivity_number_entity.sync_with_state()
 
 
     def _set_muted(self, new_state: bool) -> None:

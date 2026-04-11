@@ -384,7 +384,9 @@ class WakeWord1SensitivityNumberEntity(ESPHomeEntity):
         self._set_sensitivity = set_sensitivity
 
     def sync_with_state(self) -> None:
+        old_value = self.value
         self.value = self._get_sensitivity()
+        self._log.debug("Entity synchronized: old=%.3f new=%.3f", old_value, self.value)
 
     def handle_message(self, msg: message.Message) -> Iterable[message.Message]:
         if isinstance(msg, NumberCommandRequest) and (msg.key == self.key):
@@ -438,7 +440,9 @@ class WakeWord2SensitivityNumberEntity(ESPHomeEntity):
         self._set_sensitivity = set_sensitivity
 
     def sync_with_state(self) -> None:
+        old_value = self.value
         self.value = self._get_sensitivity()
+        self._log.debug("Entity synchronized: old=%.3f new=%.3f", old_value, self.value)
 
     def handle_message(self, msg: message.Message) -> Iterable[message.Message]:
         if isinstance(msg, NumberCommandRequest) and (msg.key == self.key):
@@ -492,7 +496,9 @@ class StopWordSensitivityNumberEntity(ESPHomeEntity):
         self._set_sensitivity = set_sensitivity
 
     def sync_with_state(self) -> None:
+        old_value = self.value
         self.value = self._get_sensitivity()
+        self._log.debug("Entity synchronized: old=%.3f new=%.3f", old_value, self.value)
 
     def handle_message(self, msg: message.Message) -> Iterable[message.Message]:
         if isinstance(msg, NumberCommandRequest) and (msg.key == self.key):
