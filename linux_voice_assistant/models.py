@@ -81,7 +81,7 @@ class ServerState:
     entities: "List[ESPHomeEntity]"
     available_wake_words: "Dict[str, AvailableWakeWord]"
     wake_words: "Dict[str, Union[MicroWakeWord, OpenWakeWord]]"
-    active_wake_words: Set[str]
+    active_wake_words: List[str]
     stop_word: "MicroWakeWord"
     music_player: "MpvMediaPlayer"
     tts_player: "MpvMediaPlayer"
