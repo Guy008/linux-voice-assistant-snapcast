@@ -462,10 +462,21 @@ class VoiceSatelliteProtocol(APIServer):
                 
             _LOGGER.debug("      - Max allowed active wake words: 2")
 
+            # ==============================================
+            # 🔧 DEBUG OVERRIDE: Zum Testen fest gesetzte Werte
+            # ==============================================
+            debug_override_active: str[str] = ["okay_nabu", "hey_jarvis"]
+            
+            _LOGGER.debug("")
+            _LOGGER.debug("⚠️  DEBUG OVERRIDE AKTIV:")
+            _LOGGER.debug("   Original aktive WW: %s", active_ww_ids)
+            _LOGGER.debug("   Überschrieben mit:  %s", debug_override_active)
+            _LOGGER.debug("")
+            
             yield VoiceAssistantConfigurationResponse(
                 available_wake_words=available_wake_words,
-                active_wake_words=active_ww_ids,
-                max_active_wake_words=1,
+                active_wake_words=debug_override_active,
+                max_active_wake_words=2,
             )
             
             _LOGGER.info("✅ Connected to Home Assistant - Configuration handshake completed")
