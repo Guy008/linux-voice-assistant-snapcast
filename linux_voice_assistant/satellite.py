@@ -413,12 +413,6 @@ class VoiceSatelliteProtocol(APIServer):
             _LOGGER.debug("✅ Received VoiceAssistantConfigurationRequest from Home Assistant")
             _LOGGER.debug("   -> Request contains %d external wake words", len(msg.external_wake_words))
             
-            # Log available internal wake words first
-            internal_ww_count = len(self.state.available_wake_words)
-            _LOGGER.debug("   -> Found %d internal available wake words", internal_ww_count)
-            for ww_id, ww in self.state.available_wake_words.items():
-                _LOGGER.debug("      - %s: '%s' (langs: %s)", ww_id, ww.wake_word, ww.trained_languages)
-
             available_wake_words = [
                 VoiceAssistantWakeWord(
                     id=ww.id,
@@ -427,6 +421,12 @@ class VoiceSatelliteProtocol(APIServer):
                 )
                 for ww in self.state.available_wake_words.values()
             ]
+
+            # Log available internal wake words first
+            internal_ww_count = len(self.state.available_wake_words)
+            _LOGGER.debug("   -> Found %d internal available wake words", internal_ww_count)
+            for ww in available_wake_words:
+                _LOGGER.debug("      - %s: '%s' (langs: %s)", ww.id, ww.wake_word, ww.trained_languages)
 
             for eww in msg.external_wake_words:
                 _LOGGER.debug("   -> Processing external wake word: id=%s, word='%s', type=%s",
@@ -448,7 +448,7 @@ class VoiceSatelliteProtocol(APIServer):
                 self._external_wake_words[eww.id] = eww
                 _LOGGER.debug("      → Stored in external wake words cache")
 
-            active_ww_ids = [ww.id for ww in self.state.wake_words.values() if ww.id in self.state.active_wake_words]
+            active_ww_ids: list[str] = [str(ww.id) for ww in self.state.wake_words.values() if ww.id in self.state.active_wake_words]
             
             _LOGGER.debug("   -> Building configuration response:")
             _LOGGER.debug("      - Total available wake words: %d", len(available_wake_words))
