@@ -299,14 +299,14 @@ async def main() -> None:
         volume=initial_volume,
     )
 
-    if fallback_used:
-        # Fallback auf Default Model wurde verwendet, speichere als aktive Wake Words
-        _LOGGER.debug("Fallback wurde verwendet, speichere Standard Wake Words in Preferences")
-        state.preferences.active_wake_words = list(active_wake_words)
-        state.active_wake_words = active_wake_words
-        state.wake_words = wake_models
-        state.save_preferences()
-        state.wake_words_changed = True
+#    if fallback_used:
+#        # Fallback auf Default Model wurde verwendet, speichere als aktive Wake Words
+#        _LOGGER.debug("Fallback wurde verwendet, speichere Standard Wake Words in Preferences")
+#        state.preferences.active_wake_words = list(active_wake_words)
+#        state.active_wake_words = active_wake_words
+#        state.wake_words = wake_models
+#        state.save_preferences()
+#        state.wake_words_changed = True
     
     if args.enable_thinking_sound:
         state.save_preferences()
