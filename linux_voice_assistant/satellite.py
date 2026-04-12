@@ -452,13 +452,20 @@ class VoiceSatelliteProtocol(APIServer):
             
             _LOGGER.debug("   -> Building configuration response:")
             _LOGGER.debug("      - Total available wake words: %d", len(available_wake_words))
-            _LOGGER.debug("      - Currently active wake words: %s", active_ww_ids)
+            _LOGGER.debug("      - Available wake words:")
+            for idx, ww in enumerate(available_wake_words):
+                _LOGGER.debug("        [%d] id='%s' | word='%s' | langs=%s", idx, ww.id, ww.wake_word, ww.trained_languages)
+                
+            _LOGGER.debug("      - Currently active wake words:")
+            for idx, ww_id in enumerate(active_ww_ids):
+                _LOGGER.debug("        [%d] %s", idx, ww_id)
+                
             _LOGGER.debug("      - Max allowed active wake words: 2")
 
             yield VoiceAssistantConfigurationResponse(
                 available_wake_words=available_wake_words,
                 active_wake_words=active_ww_ids,
-                max_active_wake_words=2,
+                max_active_wake_words=1,
             )
             
             _LOGGER.info("✅ Connected to Home Assistant - Configuration handshake completed")
