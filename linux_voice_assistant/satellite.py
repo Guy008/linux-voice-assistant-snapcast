@@ -410,6 +410,15 @@ class VoiceSatelliteProtocol(APIServer):
             if isinstance(msg, ListEntitiesRequest):
                 yield ListEntitiesDoneResponse()
         elif isinstance(msg, VoiceAssistantConfigurationRequest):
+            _LOGGER.debug("✅ Received VoiceAssistantConfigurationRequest from Home Assistant")
+            _LOGGER.debug("   -> Request contains %d external wake words", len(msg.external_wake_words))
+            
+            # Log available internal wake words first
+            internal_ww_count = len(self.state.available_wake_words)
+            _LOGGER.debug("   -> Found %d internal available wake words", internal_ww_count)
+            for ww_id, ww in self.state.available_wake_words.items():
+                _LOGGER.debug("      - %s: '%s' (langs: %s)", ww_id, ww.wake_word, ww.trained_languages)
+
             available_wake_words = [
                 VoiceAssistantWakeWord(
                     id=ww.id,
@@ -420,9 +429,14 @@ class VoiceSatelliteProtocol(APIServer):
             ]
 
             for eww in msg.external_wake_words:
+                _LOGGER.debug("   -> Processing external wake word: id=%s, word='%s', type=%s",
+                              eww.id, eww.wake_word, eww.model_type)
+                
                 if eww.model_type != "micro":
+                    _LOGGER.debug("      → Skipping: not micro model type")
                     continue
 
+                _LOGGER.debug("      → Adding to available wake words")
                 available_wake_words.append(
                     VoiceAssistantWakeWord(
                         id=eww.id,
@@ -432,47 +446,87 @@ class VoiceSatelliteProtocol(APIServer):
                 )
 
                 self._external_wake_words[eww.id] = eww
+                _LOGGER.debug("      → Stored in external wake words cache")
+
+            active_ww_ids = [ww.id for ww in self.state.wake_words.values() if ww.id in self.state.active_wake_words]
+            
+            _LOGGER.debug("   -> Building configuration response:")
+            _LOGGER.debug("      - Total available wake words: %d", len(available_wake_words))
+            _LOGGER.debug("      - Currently active wake words: %s", active_ww_ids)
+            _LOGGER.debug("      - Max allowed active wake words: 2")
 
             yield VoiceAssistantConfigurationResponse(
                 available_wake_words=available_wake_words,
-                active_wake_words=[ww.id for ww in self.state.wake_words.values() if ww.id in self.state.active_wake_words],
+                active_wake_words=active_ww_ids,
                 max_active_wake_words=2,
             )
-            _LOGGER.info("Connected to Home Assistant")
+            
+            _LOGGER.info("✅ Connected to Home Assistant - Configuration handshake completed")
+            _LOGGER.debug("✅ VoiceAssistantConfigurationResponse sent successfully")
         elif isinstance(msg, VoiceAssistantSetConfiguration):
             # Change active wake words
             active_wake_words: Set[str] = set()
-
+            new_wake_words: List[Optional[str]] = [None, None]
+            
+            # Erhalte alte Positionen vor Änderung
+            old_positions: Dict[str, int] = {}
+            for idx, ww_id in enumerate(self.state.preferences.active_wake_words):
+                if ww_id is not None and idx < 2:
+                    old_positions[ww_id] = idx
+            
+            # Verarbeite neue aktive Wake Words
             for wake_word_id in msg.active_wake_words:
                 if wake_word_id in self.state.wake_words:
-                    # Already active
+                    # Bereits aktiv
                     active_wake_words.add(wake_word_id)
-                    continue
-
-                model_info = self.state.available_wake_words.get(wake_word_id)
-                if not model_info:
-                    # Check external wake words (may require download)
-                    external_wake_word = self._external_wake_words.get(wake_word_id)
-                    if not external_wake_word:
-                        continue
-
-                    model_info = self._download_external_wake_word(external_wake_word)
+                else:
+                    model_info = self.state.available_wake_words.get(wake_word_id)
                     if not model_info:
-                        continue
+                        # Prüfe externe Wake Words (möglicherweise Download erforderlich)
+                        external_wake_word = self._external_wake_words.get(wake_word_id)
+                        if not external_wake_word:
+                            continue
 
-                    self.state.available_wake_words[wake_word_id] = model_info
+                        model_info = self._download_external_wake_word(external_wake_word)
+                        if not model_info:
+                            continue
 
-                _LOGGER.debug("Loading wake word: %s", model_info.wake_word_path)
-                self.state.wake_words[wake_word_id] = model_info.load()
+                        self.state.available_wake_words[wake_word_id] = model_info
 
-                _LOGGER.info("Wake word set: %s", wake_word_id)
-                active_wake_words.add(wake_word_id)
-                break
+                    _LOGGER.debug("Loading wake word: %s", model_info.wake_word_path)
+                    self.state.wake_words[wake_word_id] = model_info.load()
 
+                    _LOGGER.info("Wake word set: %s", wake_word_id)
+                    active_wake_words.add(wake_word_id)
+            
+            # Behalte alte Positionen bei
+            remaining_ww = list(active_wake_words)
+            placed = set()
+            
+            # Zuerst platzieren wir Wake Words an ihrer alten Position
+            for ww_id in remaining_ww:
+                if ww_id in old_positions:
+                    pos = old_positions[ww_id]
+                    if pos < 2:
+                        new_wake_words[pos] = ww_id
+                        placed.add(ww_id)
+            
+            # Restliche Wake Words an freien Plätzen hinzufügen
+            free_slots = [i for i in range(2) if new_wake_words[i] is None]
+            for ww_id in remaining_ww:
+                if ww_id not in placed and free_slots:
+                    pos = free_slots.pop(0)
+                    new_wake_words[pos] = ww_id
+                    placed.add(ww_id)
+            
+            # Wenn nur noch ein Wake Word übrig ist und es an Stelle 1 war, bleibt Stelle 0 None
+            # Stelle 2 wird automatisch None wenn nicht besetzt
+            
             self.state.active_wake_words = active_wake_words
             _LOGGER.debug("Active wake words: %s", active_wake_words)
+            _LOGGER.debug("Wake word positions: [0]=%s, [1]=%s", new_wake_words[0], new_wake_words[1])
 
-            self.state.preferences.active_wake_words = list(active_wake_words)
+            self.state.preferences.active_wake_words = new_wake_words
             self.state.save_preferences()
             self.state.wake_words_changed = True
 

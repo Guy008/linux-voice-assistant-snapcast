@@ -81,7 +81,7 @@ def load_wake_models(
     available_wake_words: Dict[str, AvailableWakeWord],
     active_wake_word_ids: Optional[List[str]],
     default_wake_word_id: str
-) -> tuple[Dict[str, Union[MicroWakeWord, OpenWakeWord]], Set[str]]:
+) -> tuple[Dict[str, Union[MicroWakeWord, OpenWakeWord]], Set[str], bool]:
     """
     Loads the specified wake word models.
     
@@ -139,7 +139,9 @@ def load_wake_models(
     _LOGGER.debug("Loaded %d wake models successfully", len(wake_models))
     _LOGGER.debug("Active wake words: %s", sorted(active_wake_words))
     
-    return wake_models, active_wake_words
+    fallback_used = not active_wake_word_ids or not wake_models
+    
+    return wake_models, active_wake_words, fallback_used
 
 
 def load_stop_model(wake_word_dirs: List[Path], stop_model_id: str) -> Optional[MicroWakeWord]:

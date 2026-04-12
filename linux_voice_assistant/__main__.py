@@ -261,7 +261,7 @@ async def main() -> None:
         preferences.thinking_sound = 1
 
     # Load wake/stop models
-    wake_models, active_wake_words = load_wake_models(
+    wake_models, active_wake_words, fallback_used = load_wake_models(
         available_wake_words,
         preferences.active_wake_words,
         args.wake_model
@@ -299,6 +299,15 @@ async def main() -> None:
         volume=initial_volume,
     )
 
+    if fallback_used:
+        # Fallback auf Default Model wurde verwendet, speichere als aktive Wake Words
+        _LOGGER.debug("Fallback wurde verwendet, speichere Standard Wake Words in Preferences")
+        state.preferences.active_wake_words = list(active_wake_words)
+        state.active_wake_words = active_wake_words
+        state.wake_words = wake_models
+        state.save_preferences()
+        state.wake_words_changed = True
+    
     if args.enable_thinking_sound:
         state.save_preferences()
 
