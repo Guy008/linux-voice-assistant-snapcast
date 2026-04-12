@@ -450,32 +450,9 @@ class VoiceSatelliteProtocol(APIServer):
 
             active_ww_ids: list[str] = [str(ww.id) for ww in self.state.wake_words.values() if ww.id in self.state.active_wake_words]
             
-            _LOGGER.debug("   -> Building configuration response:")
-            _LOGGER.debug("      - Total available wake words: %d", len(available_wake_words))
-            _LOGGER.debug("      - Available wake words:")
-            for idx, ww in enumerate(available_wake_words):
-                _LOGGER.debug("        [%d] id='%s' | word='%s' | langs=%s", idx, ww.id, ww.wake_word, ww.trained_languages)
-                
-            _LOGGER.debug("      - Currently active wake words:")
-            for idx, ww_id in enumerate(active_ww_ids):
-                _LOGGER.debug("        [%d] %s", idx, ww_id)
-                
-            _LOGGER.debug("      - Max allowed active wake words: 2")
-
-            # ==============================================
-            # 🔧 DEBUG OVERRIDE: Zum Testen fest gesetzte Werte
-            # ==============================================
-            debug_override_active: str[str] = ["okay_nabu", "hey_jarvis"]
-            
-            _LOGGER.debug("")
-            _LOGGER.debug("⚠️  DEBUG OVERRIDE AKTIV:")
-            _LOGGER.debug("   Original aktive WW: %s", active_ww_ids)
-            _LOGGER.debug("   Überschrieben mit:  %s", debug_override_active)
-            _LOGGER.debug("")
-            
             yield VoiceAssistantConfigurationResponse(
                 available_wake_words=available_wake_words,
-                active_wake_words=debug_override_active,
+                active_wake_words=active_ww_ids,
                 max_active_wake_words=2,
             )
             
