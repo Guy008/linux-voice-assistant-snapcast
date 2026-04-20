@@ -1,160 +1,231 @@
-# Linux-Voice-Assistant
+# Linux Voice Assistant — Snapcast Edition
 
-[![CI](https://github.com/OHF-Voice/linux-voice-assistant/actions/workflows/docker-build-release.yml/badge.svg)](https://github.com/OHF-Voice/linux-voice-assistant/actions/workflows/docker-build-release.yml) [![GitHub Package Version](https://img.shields.io/github/v/tag/OHF-Voice/linux-voice-assistant?label=version)](https://github.com/OHF-Voice/linux-voice-assistant/pkgs/container/linux-voice-assistant) [![GitHub License](https://img.shields.io/github/license/OHF-Voice/linux-voice-assistant)](https://github.com/OHF-Voice/linux-voice-assistant/blob/main/LICENSE.md) [![GitHub last commit](https://img.shields.io/github/last-commit/OHF-Voice/linux-voice-assistant)](https://github.com/OHF-Voice/linux-voice-assistant/commits) [![GitHub Container Registry](https://img.shields.io/badge/Container%20Registry-GHCR-blue)](https://github.com/OHF-Voice/linux-voice-assistant/pkgs/container/linux-voice-assistant)
+**Fork of [OHF-Voice/linux-voice-assistant](https://github.com/OHF-Voice/linux-voice-assistant) with multi-room audio routing via Snapcast/TCP.**
 
-An experimental Linux-Voice-Assistant software for [Home Assistant](https://www.home-assistant.io/) remote voice control and interaction.
+> Instead of playing audio locally or directly to a Bluetooth speaker,
+> this fork routes all assistant audio through a Snapcast server — so every
+> speaker in the house plays the assistant's voice simultaneously, in sync.
 
-This project enables you to build a Linux-based voice assistant designed to use [Assist](https://www.home-assistant.io/voice_control/) for Home Assistant. It allows you to create your own smart speaker that runs on any x64 or ARM64 hardware capable of handling local audio processing (using PulseAudio).
+---
 
-Unlike simpler voice satellites that run on microcontrollers with very limited compute power, this setup can perform local wake word detection (OWW/MWW) and process some data on-device. 
+## What's different from upstream
 
-Because it runs on a full Linux system and offers access significantly more local computing resources for additional features and other integrations on the same satellite, this approach also provides greater flexibility for customization (such as for example experiment with using PipeWire).
+| Feature | Upstream | This fork |
+|---------|----------|-----------|
+| Audio output | Local speaker / direct BT | Snapcast → all house speakers |
+| Audio transport | MPV → local device | MPV → PipeWire virtual sink → pacat → ffmpeg → TCP → Snapcast |
+| MPV `audio-buffer` | 0.8s | 0.3s (lower latency) |
+| `audio-stream-silence` | enabled | **removed** (breaks PipeWire routing) |
+| `AUDIO_OUTPUT_DEVICE` | `default` | `pipewire/lva-snapcast` |
+| Bluetooth stability | none | HFP lock, auto-reconnect service, crash-loop prevention |
+| Headless server support | partial | full (WirePlumber seat-monitoring fix) |
+| Wake words included | `okay_nabu` | `agent_smitt` + `maraa_maraa_sheal_hakir` |
+| One-shot system installer | no | `system/install.sh` |
 
-[![A project from the Open Home Foundation](https://www.openhomefoundation.org/badges/ohf-project.png)](https://www.openhomefoundation.org/)
+---
 
-## Features
+## Audio architecture
 
-- Works with [Home Assistant](https://www.home-assistant.io/integrations/esphome/) using the [ESPHome](https://esphome.io/) protocol/API (via [aioesphomeapi](https://github.com/esphome/aioesphomeapi))
-- Feature local on-device wake word detection using integrated [OpenWakeWord](https://github.com/dscripka/openWakeWord) or [MicroWakeWord](https://github.com/kahrendt/microWakeWord)
-- Supports multiple wake words and languages
-- Supports multiple architectures (linux/amd64 and linux/aarch64)
-- Automated builds with artifact attestation for security
-- Supports announcments, start/continue conversation, and timers
-- Tested with Python 3.13 and Python 3.11.
-- Prebuild docker image available on [GitHub Container Registry](https://github.com/OHF-Voice/linux-voice-assistant/pkgs/container/linux-voice-assistant)
-- Prebuild Raspberry Pi image
-
-## Usage
-
-### Hardware
-
-A more extensive list for possible compatible hardware can be found in the [PiCompose documentation](https://github.com/florian-asche/PiCompose) but basically any microphone that works with [PipeWire (multimedia framework for Linux)](https://pipewire.org/) can in theory be used for voice input with the prebuild image from there, you should however preferably use a far-field microphone-array solution if want better result. 
-
-Two solutions recommended for test setups today is to use a Raspberry Pi Zero 2 W SBC (Single Board Computer with built-in WiFi) in combination with the [Satellite1 Hat Board](https://futureproofhomes.net/products/satellite1-top-microphone-board) or the [Respeaker Lite](https://wiki.seeedstudio.com/reSpeaker_usb_v3/). Those have microphone-array designed for far-field voice capture with the added benefit of using an onboard XMOS DSP microcontroller with custom firmware which does advanced audio pre-processing for microphone cleanup that result in very good voice recognition capabilities (as it runs algorithms for Noise Suppression, Acoustic Echo Cancellation, Interference Cancellation, and Automatic Gain Control). 
-
-Alternativly if on a lower budget then suggest could try other untested microphone-array boards like example the [reSpeaker 2-Mics Pi HAT V2.0](https://wiki.seeedstudio.com/ReSpeaker_2_Mics_Pi_HAT/) (which uses a much more basic audio codec chip).
-
-As for the minimum required compute performance on these satellites the target reference hardware for testing is currently a 64-bit ARM-based SBC based on Raspberry Pi RP3A0 SiP (System-in-Package); which means the Raspberry Pi Zero 2 W, Raspberry Pi Compute Module 3E (Raspberry Pi CM3E), or other development boards that uses the Compute Module Zero" (Raspberry Pi CM0), as all of which have similar specifications to the Raspberry Pi 3 B/B+ but with a CPU running at a lower frequency.
-
-But you can also install LVA on AMD64 devices, for example on your Linux desktop computer.
-
-### Software
-
-#### Installation
-
-For Raspberry Pi users, we provide a prebuild image that can be flashed to a SD card. See [PiCompose](https://github.com/florian-asche/PiCompose).
-
-For all other users we have different installation methods available (Docker, systemd), each with its own dedicated instructions. See [Linux-Voice-Assistant - Installation](docs/install.md). 
-
-#### Parameter overview
-
-💡 **Note:** There is a [environment variable](docs/install_application.md#environment-variables-reference) for each parameter if you use docker or systemd based setup.
-
-``` sh
-usage: __main__.py [-h] [--name NAME] [--audio-input-device AUDIO_INPUT_DEVICE] [--list-input-devices] [--audio-input-block-size AUDIO_INPUT_BLOCK_SIZE] [--audio-output-device AUDIO_OUTPUT_DEVICE] [--list-output-devices] [--wake-word-dir WAKE_WORD_DIR]  [--mic-auto-gain] [--mic-noise-suppression]
-                   [--wake-model WAKE_MODEL] [--stop-model STOP_MODEL] [--download-dir DOWNLOAD_DIR] [--refractory-seconds REFRACTORY_SECONDS] [--wakeup-sound WAKEUP_SOUND] [--timer-finished-sound TIMER_FINISHED_SOUND] [--processing-sound PROCESSING_SOUND]
-                   [--mute-sound MUTE_SOUND] [--unmute-sound UNMUTE_SOUND] [--preferences-file PREFERENCES_FILE] [--host HOST] [--network-interface NETWORK_INTERFACE] [--port PORT] [--enable-thinking-sound] [--debug]
+```
+Bluetooth Mic (JBL Flip 4 / HFP)
+        │
+        ▼
+  PipeWire (host)
+        │  AUDIO_INPUT_DEVICE=bluez_input.*
+        ▼
+linux-voice-assistant  ◄──── Home Assistant (STT / TTS)
+  (Docker, network=host)
+        │  AUDIO_OUTPUT_DEVICE=pipewire/lva-snapcast
+        ▼
+  lva-snapcast         ← PipeWire virtual null sink (22050Hz mono)
+        │  lva-snapcast.monitor
+        ▼
+  pacat ──► ffmpeg ──► TCP:2509
+                           │
+                           ▼
+                    Snapcast Server
+                           │
+            ┌──────────────┼──────────────┐
+            ▼              ▼              ▼
+       Living room     Bedroom       Kitchen / TV
+       (snapclient)  (snapclient)   (snapclient)
 ```
 
-| Parameter | Description | Default |
+All speakers play in sync. Latency: ~500–700ms (adjustable via Snapcast buffer).
+
+---
+
+## Quick start
+
+### Prerequisites
+
+- Arch Linux (or similar) with PipeWire + WirePlumber
+- Snapcast server running and reachable
+- Bluetooth speaker/mic paired (or any PipeWire-compatible mic)
+- Docker + Docker Compose
+- Home Assistant with ESPHome integration
+
+### 1. Clone
+
+```sh
+git clone https://github.com/Guy008/linux-voice-assistant-snapcast
+cd linux-voice-assistant-snapcast
+```
+
+### 2. Configure `.env`
+
+```sh
+cp .env.example .env
+nano .env   # set your IPs, BT device MAC, network interface
+```
+
+Key variables:
+```dotenv
+AUDIO_INPUT_DEVICE="bluez_input.XX:XX:XX:XX:XX:XX"   # your BT mic
+AUDIO_OUTPUT_DEVICE="pipewire/lva-snapcast"            # do not change
+CLIENT_NAME="LivingRoom"                               # shown in HA
+NETWORK_INTERFACE="br0"                                # or eth0, eno1
+PORT="6053"
+```
+
+### 3. Install system components (one time)
+
+Edit the variables at the top of `system/install.sh`:
+```sh
+USERNAME="your_username"
+SNAPCAST_HOST="192.168.1.X"    # your Snapcast server IP
+BT_DEVICE_MAC="XX:XX:XX:XX:XX:XX"
+```
+
+Then run:
+```sh
+sudo system/install.sh
+```
+
+This installs:
+- PipeWire virtual sink (`lva-snapcast`)
+- WirePlumber config (headless fix, HFP lock, default sink)
+- D-Bus policy for Bluetooth
+- 4 systemd services (stream, watcher, watchdog, BT reconnect)
+
+### 4. Restart PipeWire (as your user, not root)
+
+```sh
+systemctl --user restart pipewire pipewire-pulse wireplumber
+```
+
+### 5. Start the container
+
+```sh
+docker compose up -d
+docker compose logs -f
+```
+
+### 6. Add to Home Assistant
+
+**Settings → Devices & Services → Add Integration → ESPHome**  
+Host: `<your server IP>`, Port: `6053`
+
+---
+
+## Keeping up with upstream
+
+```sh
+git fetch upstream
+git merge upstream/main
+# resolve any conflicts in docker-compose.yml / libmpv.py if needed
+git push origin main
+```
+
+---
+
+## Included wake words
+
+| Model file | Wake phrase | Language |
+|-----------|-------------|----------|
+| `agent_smitt.tflite` | "Agent Smith" | Hebrew-accented English |
+| `maraa_maraa_sheal_hakir.tflite` | "מראה מראה שעל הקיר" (Magic Mirror) | Hebrew |
+
+Place additional custom wake word models in the `wakewords/` directory  
+with a matching `.json` config file. See `wakewords/agent_smitt.json` for the format.
+
+---
+
+## Systemd services (installed by `system/install.sh`)
+
+| Service | Purpose |
+|---------|---------|
+| `lva-snapcast-stream` | Captures `lva-snapcast.monitor` → ffmpeg → TCP → Snapcast |
+| `lva-snapcast-watcher` | Restarts the stream 3s after the Docker container (re)starts |
+| `lva-audio-watchdog.timer` | Every 2 min: checks ffmpeg TCP connection, restarts if broken |
+| `bt-reconnect-jbl` | Every 15s: reconnects BT device if disconnected |
+
+```sh
+# Check status of all services
+systemctl is-active lva-snapcast-stream lva-snapcast-watcher lva-audio-watchdog.timer bt-reconnect-jbl
+
+# Full diagnostics
+ss -tnp | grep 2509       # should show ESTAB with ffmpeg
+wpctl status              # lva-snapcast should be visible as a sink
+docker ps                 # container should be Up
+```
+
+---
+
+## Troubleshooting
+
+| Problem | Likely cause | Fix |
+|---------|-------------|-----|
+| No audio on any speaker | pacat has stale PipeWire connection | `sudo systemctl restart lva-snapcast-stream` |
+| Audio on BT speaker only, not others | MPV routing to wrong device | Check `AUDIO_OUTPUT_DEVICE=pipewire/lva-snapcast` in `.env` |
+| Container crash loop at startup | BT mic not ready | `bt-reconnect-jbl` + entrypoint wait loop handle this automatically |
+| Wake word stops working after a few minutes | WirePlumber switched BT from HFP → A2DP, mic disappeared | Check `52-jbl-headset-profile.conf` is installed |
+| WirePlumber BT monitor not starting | Headless server: seat=online instead of active | Check `51-disable-seat-monitoring.conf` is installed |
+| `docker compose restart` doesn't apply changes | restart reuses the existing container | Use `docker compose down && docker compose up -d` |
+
+Full setup guide (Arch Linux, step by step): [docs/setup-guide-guy008.md](docs/setup-guide-guy008.md)
+
+---
+
+## Original project features
+
+Everything from the upstream project is preserved:
+
+- Home Assistant integration via ESPHome protocol
+- Local wake word detection — OpenWakeWord and MicroWakeWord
+- Multiple wake words and languages
+- Announcements, start/continue conversation, timers
+- `amd64` and `aarch64` Docker images (uses upstream GHCR image)
+- All original CLI parameters and environment variables
+
+See the [original README](https://github.com/OHF-Voice/linux-voice-assistant) and [docs/install.md](docs/install.md) for full upstream documentation.
+
+---
+
+## Parameter reference
+
+| Parameter | Env variable | Default |
 |-----------|-------------|---------|
-| `--name` | Name of the voice assistant device (required) | Autogenerated (`lva-MAC-ADDRESS`) |
-| `--audio-input-device` | Soundcard name for input device | Autodetected |
-| `--audio-input-block-size` | Audio input block size in samples | 1024 |
-| `--audio-output-device` | mpv name for output device | Autodetected |
-| `--mic-volume` | Control microphone volume | 1.0 |
-| `--mic-auto-gain` | Add WebRTC Gain to Mic | 0 |
-| `--mic-noise-suppression` | Add WebRTC Noise Suppression to Mic | 0 |
-| `--wake-word-dir` | Directory with wake word models (.tflite) and configs (.json) | `wakewords/` |
-| `--wake-model` | ID of active wake word model | `okay_nabu` |
-| `--stop-model` | ID of stop model | `stop` |
-| `--download-dir` | Directory to download custom wake word models, etc. | `local/` |
-| `--refractory-seconds` | Seconds before wake word can be activated again | 2.0 |
-| `--timer-max-ring-seconds` | Seconds after which the timer stops ringing | 900.0 |
-| `--wakeup-sound` | Sound file played when wake word is detected | `sounds/wake_word_triggered.flac` |
-| `--timer-finished-sound` | Sound file played when timer finishes | `sounds/timer_finished.flac` |
-| `--processing-sound` | Sound played while assistant is processing | `sounds/processing.wav` |
-| `--mute-sound` | Sound played when muting the assistant | `sounds/mute_switch_on.flac` |
-| `--unmute-sound` | Sound played when unmuting the assistant | `sounds/mute_switch_off.flac` |
-| `--preferences-file` | Path to preferences JSON file | `preferences.json` |
-| `--host` | IP-Address for ESPHome server, use 0.0.0.0 for all | Autodetected |
-| `--network-interface` | Network interface for ESPHome server | Autodetected |
-| `--port` | Port for ESPHome server | 6053 |
-| `--enable-thinking-sound` | Enable thinking sound on startup | False |
-| `--debug` | Print DEBUG messages to console | False |
-| `--output-only` | Enable output only mode | False |
+| `--name` | `CLIENT_NAME` | Auto (`lva-MAC`) |
+| `--audio-input-device` | `AUDIO_INPUT_DEVICE` | Autodetected |
+| `--audio-output-device` | `AUDIO_OUTPUT_DEVICE` | `pipewire/lva-snapcast` |
+| `--wake-word-dir` | `WAKE_WORD_DIR` | `wakewords/custom/openWakeWord` |
+| `--wake-model` | `WAKE_MODEL` | `agent_smitt` |
+| `--host` | `HOST` | `0.0.0.0` |
+| `--network-interface` | `NETWORK_INTERFACE` | Autodetected |
+| `--port` | `PORT` | `6053` |
+| `--mic-volume` | `MIC_VOLUME` | `1.0` |
+| `--mic-auto-gain` | `MIC_AUTO_GAIN` | `0` |
+| `--mic-noise-suppression` | `MIC_NOISE_SUPPRESSION` | `0` |
+| `--debug` | `ENABLE_DEBUG=1` | off |
 
-💡 **Note:** There is a detailed explanation on the gain and noise suppression flags in the [audio options](docs/audio_options.md) file.
+Full list: see [docs/install_application.md](docs/install_application.md)
 
-## Build Information
-
-Image builds can be tracked in this repository's `Actions` tab, and utilize [artifact attestation](https://docs.github.com/en/actions/security-guides/using-artifact-attestations-to-establish-provenance-for-builds) to certify provenance.
-
-The Docker images are built using GitHub Actions, which provides:
-
-- Automated builds for different architectures
-- Artifact attestation for build provenance verification
-- Regular updates and maintenance
-
-The documentation for the build process can be found in the [GitHub Actions Workflows](.github/workflow.md) file.
-
-## Development
-
-### Code Quality Checks
-
-The project uses the following tools to ensure code quality:
-- **Black**: Code formatting (88 characters per line, PEP 8 compliant)
-- **isort**: Import sorting compatible with Black
-- **flake8**: Style and syntax checks
-- **pylint**: Code quality checks
-- **mypy**: Static type analysis
-
-### Setup
-
-To use the development tools (linting, testing, etc.), you need to install the required dependencies:
-
-``` sh
-./script/setup --dev
-source .venv/bin/activate
-```
-
-### Linting Commands
-
-#### Run all linting checks
-``` sh
-./script/lint...
-```
-
-#### Individual linting commands (with auto-fix support)
-
-| Script | Description | Auto-fix Available? |
-|--------|-------------|---------------------|
-| `./script/lint_black` | Checks Python code formatting with Black | Yes, use `--auto` flag |
-| `./script/lint_flake8` | Runs style and syntax checks with flake8 | No |
-| `./script/lint_isort` | Checks import sorting with isort | Yes, use `--auto` flag |
-| `./script/lint_mypy` | Runs static type analysis with mypy | No |
-| `./script/lint_pylint` | Runs code quality checks with pylint | Yes, use `--auto` flag |
-
-#### Examples
-
-Run a specific lint check:
-``` sh
-./script/lint_black
-```
-
-Auto-fix formatting issues (Black + isort):
-``` sh
-./script/lint_black --auto
-./script/lint_isort --auto
-```
-
-### Testing
-
-Run the test suite:
-``` sh
-./script/test
-```
+---
 
 ## License
 
-This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENSE) file for details.
+Apache 2.0 — same as upstream. See [LICENSE.md](LICENSE.md).
+
+Fork maintained by [@Guy008](https://github.com/Guy008).  
+Based on [OHF-Voice/linux-voice-assistant](https://github.com/OHF-Voice/linux-voice-assistant) by the [Open Home Foundation](https://www.openhomefoundation.org/).
