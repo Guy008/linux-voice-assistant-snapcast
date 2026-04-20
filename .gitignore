@@ -27,5 +27,7 @@ version_githash.txt
 # Local notes / session files
 my-version-0.1.txt
 
-# Root-level tflite duplicates (models live in wakewords/)
+# Wake word models — private, not for public repo
 /*.tflite
+/wakewords/*.tflite
+/wakewords/*.json
