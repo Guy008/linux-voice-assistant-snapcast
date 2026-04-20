@@ -1,225 +1,188 @@
 # Linux Voice Assistant — Snapcast Edition
 
-**Fork of [OHF-Voice/linux-voice-assistant](https://github.com/OHF-Voice/linux-voice-assistant) with multi-room audio routing via Snapcast/TCP.**
-
-> Instead of playing audio locally or directly to a Bluetooth speaker,
-> this fork routes all assistant audio through a Snapcast server — so every
-> speaker in the house plays the assistant's voice simultaneously, in sync.
+**עברית | [English below](#english)**
 
 ---
 
-## What's different from upstream
+## עברית
+
+פורק של [OHF-Voice/linux-voice-assistant](https://github.com/OHF-Voice/linux-voice-assistant) עם שינוי מרכזי אחד:
+
+**כל קול העוזר יוצא דרך Snapcast** — כל הרמקולים בבית שומעים בסנכרון, במקום שהקול ינוגן ישירות מהמחשב.
+
+### מה שונה מהפרויקט המקורי?
+
+| תכונה | מקורי | הפורק הזה |
+|-------|-------|-----------|
+| פלט אודיו | רמקול מקומי / BT ישיר | Snapcast ← כל הרמקולים בבית |
+| יציבות Bluetooth | בסיסית | נעילת HFP, reconnect אוטומטי, מניעת crash-loop |
+| שרת headless | חלקי | תיקון WirePlumber seat-monitoring |
+| התקנה | ידנית | `sudo system/install.sh` — מגדיר הכל |
+
+### איך מתקינים?
+
+```bash
+# 1. שכפל את הפרויקט
+git clone https://github.com/Guy008/linux-voice-assistant-snapcast
+cd linux-voice-assistant-snapcast
+
+# 2. הגדר את קובץ הסביבה
+cp .env.example .env
+nano .env    # שנה: AUDIO_INPUT_DEVICE, CLIENT_NAME, NETWORK_INTERFACE, PORT
+
+# 3. ערוך 3 שורות בראש system/install.sh (USERNAME, SNAPCAST_HOST, BT_DEVICE_MAC)
+#    ואז הרץ:
+sudo system/install.sh
+
+# 4. אתחל PipeWire (כ-user, לא root!)
+systemctl --user restart pipewire pipewire-pulse wireplumber
+
+# 5. הרם את הcontainer
+docker compose up -d
+
+# 6. הוסף ל-Home Assistant:
+#    Settings → Devices & Services → Add Integration → ESPHome
+#    Host: <IP השרת שלך>  Port: 6053
+```
+
+### מה כלול?
+
+- `system/install.sh` — מתקין הכל בלחיצה אחת (D-Bus, PipeWire sink, WirePlumber, systemd services, snapserver)
+- `docker-entrypoint.sh` — ממתין ל-Bluetooth mic לפני שמפעיל (מונע crash-loop)
+- `linux_voice_assistant/player/libmpv.py` — latency מופחת, ניתוב נכון ל-PipeWire
+- `docs/setup-guide-guy008.md` — מדריך מלא צעד-אחר-צעד (Arch Linux, עברית)
+- `wakewords/` — מקום להניח מודלים מותאמים אישית (`.tflite` + `.json`)
+
+### אבחון מהיר
+
+```bash
+# כל השירותים פועלים?
+systemctl is-active lva-snapcast-stream lva-snapcast-watcher lva-audio-watchdog.timer bt-reconnect-jbl
+
+# ffmpeg מחובר לSnapcast?
+ss -tnp | grep 2509   # צפוי: ESTAB עם ffmpeg
+
+# האם הקונטיינר עלה?
+docker compose ps
+```
+
+---
+
+## English
+
+Fork of [OHF-Voice/linux-voice-assistant](https://github.com/OHF-Voice/linux-voice-assistant) with one core change:
+
+> Instead of playing audio locally or directly to a Bluetooth speaker,  
+> all assistant audio is routed through **Snapcast** — every speaker in the house plays in sync.
+
+### What's different from upstream
 
 | Feature | Upstream | This fork |
 |---------|----------|-----------|
-| Audio output | Local speaker / direct BT | Snapcast → all house speakers |
-| Audio transport | MPV → local device | MPV → PipeWire virtual sink → pacat → ffmpeg → TCP → Snapcast |
-| MPV `audio-buffer` | 0.8s | 0.3s (lower latency) |
+| Audio output | Local device / direct BT | Snapcast → all house speakers |
+| Audio transport | MPV → local | MPV → PipeWire virtual sink → pacat → ffmpeg → TCP → Snapcast |
+| MPV `audio-buffer` | 0.8s | 0.3s |
 | `audio-stream-silence` | enabled | **removed** (breaks PipeWire routing) |
 | `AUDIO_OUTPUT_DEVICE` | `default` | `pipewire/lva-snapcast` |
-| Bluetooth stability | none | HFP lock, auto-reconnect service, crash-loop prevention |
-| Headless server support | partial | full (WirePlumber seat-monitoring fix) |
-| Wake words included | `okay_nabu` | `agent_smitt` + `maraa_maraa_sheal_hakir` |
-| One-shot system installer | no | `system/install.sh` |
+| Bluetooth stability | basic | HFP lock, auto-reconnect, crash-loop prevention |
+| Headless server | partial | WirePlumber seat-monitoring fix included |
+| System installer | none | `sudo system/install.sh` |
 
----
-
-## Audio architecture
+### Audio flow
 
 ```
-Bluetooth Mic (JBL Flip 4 / HFP)
-        │
-        ▼
-  PipeWire (host)
-        │  AUDIO_INPUT_DEVICE=bluez_input.*
-        ▼
-linux-voice-assistant  ◄──── Home Assistant (STT / TTS)
-  (Docker, network=host)
-        │  AUDIO_OUTPUT_DEVICE=pipewire/lva-snapcast
-        ▼
-  lva-snapcast         ← PipeWire virtual null sink (22050Hz mono)
-        │  lva-snapcast.monitor
-        ▼
-  pacat ──► ffmpeg ──► TCP:2509
-                           │
-                           ▼
-                    Snapcast Server
-                           │
-            ┌──────────────┼──────────────┐
-            ▼              ▼              ▼
-       Living room     Bedroom       Kitchen / TV
-       (snapclient)  (snapclient)   (snapclient)
+Bluetooth Mic (HFP)
+      │
+      ▼
+PipeWire (host)  ──►  linux-voice-assistant (Docker)  ◄──►  Home Assistant
+                              │
+                              │  AUDIO_OUTPUT_DEVICE=pipewire/lva-snapcast
+                              ▼
+                       lva-snapcast        ← PipeWire virtual null sink
+                       (22050Hz mono)
+                              │  monitor
+                              ▼
+                   pacat ──► ffmpeg ──► TCP:2509
+                                           │
+                                    Snapcast Server
+                                           │
+                          ┌────────────────┼────────────────┐
+                          ▼                ▼                ▼
+                    Living room        Bedroom          Kitchen
+                    (snapclient)     (snapclient)     (snapclient)
 ```
 
-All speakers play in sync. Latency: ~500–700ms (adjustable via Snapcast buffer).
+### Quick start
 
----
-
-## Quick start
-
-### Prerequisites
-
-- Arch Linux (or similar) with PipeWire + WirePlumber
-- Snapcast server running and reachable
-- Bluetooth speaker/mic paired (or any PipeWire-compatible mic)
-- Docker + Docker Compose
-- Home Assistant with ESPHome integration
-
-### 1. Clone
-
-```sh
+```bash
 git clone https://github.com/Guy008/linux-voice-assistant-snapcast
 cd linux-voice-assistant-snapcast
-```
 
-### 2. Configure `.env`
-
-```sh
 cp .env.example .env
-nano .env   # set your IPs, BT device MAC, network interface
-```
+nano .env   # set AUDIO_INPUT_DEVICE, CLIENT_NAME, NETWORK_INTERFACE
 
-Key variables:
-```dotenv
-AUDIO_INPUT_DEVICE="bluez_input.XX:XX:XX:XX:XX:XX"   # your BT mic
-AUDIO_OUTPUT_DEVICE="pipewire/lva-snapcast"            # do not change
-CLIENT_NAME="LivingRoom"                               # shown in HA
-NETWORK_INTERFACE="br0"                                # or eth0, eno1
-PORT="6053"
-```
-
-### 3. Install system components (one time)
-
-Edit the variables at the top of `system/install.sh`:
-```sh
-USERNAME="your_username"
-SNAPCAST_HOST="192.168.1.X"    # your Snapcast server IP
-BT_DEVICE_MAC="XX:XX:XX:XX:XX:XX"
-```
-
-Then run:
-```sh
+# Edit USERNAME, SNAPCAST_HOST, BT_DEVICE_MAC at the top of install.sh, then:
 sudo system/install.sh
-```
 
-This installs:
-- PipeWire virtual sink (`lva-snapcast`)
-- WirePlumber config (headless fix, HFP lock, default sink)
-- D-Bus policy for Bluetooth
-- 4 systemd services (stream, watcher, watchdog, BT reconnect)
-
-### 4. Restart PipeWire (as your user, not root)
-
-```sh
 systemctl --user restart pipewire pipewire-pulse wireplumber
-```
-
-### 5. Start the container
-
-```sh
 docker compose up -d
-docker compose logs -f
 ```
 
-### 6. Add to Home Assistant
+Add to Home Assistant: **Settings → Devices & Services → ESPHome** → host + port 6053.
 
-**Settings → Devices & Services → Add Integration → ESPHome**  
-Host: `<your server IP>`, Port: `6053`
-
----
-
-## Keeping up with upstream
-
-```sh
-git fetch upstream
-git merge upstream/main
-# resolve any conflicts in docker-compose.yml / libmpv.py if needed
-git push origin main
-```
-
----
-
-## Included wake words
-
-| Model file | Wake phrase | Language |
-|-----------|-------------|----------|
-| `agent_smitt.tflite` | "Agent Smith" | Hebrew-accented English |
-| `maraa_maraa_sheal_hakir.tflite` | "מראה מראה שעל הקיר" (Magic Mirror) | Hebrew |
-
-Place additional custom wake word models in the `wakewords/` directory  
-with a matching `.json` config file. See `wakewords/agent_smitt.json` for the format.
-
----
-
-## Systemd services (installed by `system/install.sh`)
+### Systemd services (installed automatically)
 
 | Service | Purpose |
 |---------|---------|
-| `lva-snapcast-stream` | Captures `lva-snapcast.monitor` → ffmpeg → TCP → Snapcast |
-| `lva-snapcast-watcher` | Restarts the stream 3s after the Docker container (re)starts |
-| `lva-audio-watchdog.timer` | Every 2 min: checks ffmpeg TCP connection, restarts if broken |
+| `lva-snapcast-stream` | pacat → ffmpeg → TCP → Snapcast |
+| `lva-snapcast-watcher` | Restarts stream 3s after container restart (fixes stale pacat connection) |
+| `lva-audio-watchdog.timer` | Every 2 min: checks ffmpeg TCP connection |
 | `bt-reconnect-jbl` | Every 15s: reconnects BT device if disconnected |
 
-```sh
-# Check status of all services
-systemctl is-active lva-snapcast-stream lva-snapcast-watcher lva-audio-watchdog.timer bt-reconnect-jbl
+### Key rules (lessons learned the hard way)
 
-# Full diagnostics
-ss -tnp | grep 2509       # should show ESTAB with ffmpeg
-wpctl status              # lva-snapcast should be visible as a sink
-docker ps                 # container should be Up
+- **Never re-add `audio-stream-silence`** — it creates a PipeWire node that doesn't route to lva-snapcast
+- **Never set Snapcast buffer below 500ms** — WiFi clients will stutter
+- **Always use `docker compose down && up -d`** after changing `.env` or volume mounts — `restart` doesn't apply them
+- **`AUDIO_OUTPUT_DEVICE` must have `pipewire/` prefix** — without it MPV silently fails
+
+### Keeping up with upstream
+
+```bash
+git fetch upstream
+git merge upstream/main
+git push origin main
 ```
 
----
+### Custom wake words
 
-## Troubleshooting
+Place `.tflite` model and matching `.json` config in `wakewords/`:
 
-| Problem | Likely cause | Fix |
-|---------|-------------|-----|
-| No audio on any speaker | pacat has stale PipeWire connection | `sudo systemctl restart lva-snapcast-stream` |
-| Audio on BT speaker only, not others | MPV routing to wrong device | Check `AUDIO_OUTPUT_DEVICE=pipewire/lva-snapcast` in `.env` |
-| Container crash loop at startup | BT mic not ready | `bt-reconnect-jbl` + entrypoint wait loop handle this automatically |
-| Wake word stops working after a few minutes | WirePlumber switched BT from HFP → A2DP, mic disappeared | Check `52-jbl-headset-profile.conf` is installed |
-| WirePlumber BT monitor not starting | Headless server: seat=online instead of active | Check `51-disable-seat-monitoring.conf` is installed |
-| `docker compose restart` doesn't apply changes | restart reuses the existing container | Use `docker compose down && docker compose up -d` |
+```json
+{
+  "type": "openWakeWord",
+  "wake_word": "Hey Computer",
+  "model": "hey_computer.tflite"
+}
+```
 
-Full setup guide (Arch Linux, step by step): [docs/setup-guide-guy008.md](docs/setup-guide-guy008.md)
+Set `WAKE_MODEL=hey_computer` in `.env`.
 
----
+### Full setup guide
 
-## Original project features
+Step-by-step guide for Arch Linux (Bluetooth pairing, PipeWire, WirePlumber, Snapcast):  
+→ [docs/setup-guide-guy008.md](docs/setup-guide-guy008.md)
 
-Everything from the upstream project is preserved:
+### Troubleshooting
 
-- Home Assistant integration via ESPHome protocol
-- Local wake word detection — OpenWakeWord and MicroWakeWord
-- Multiple wake words and languages
-- Announcements, start/continue conversation, timers
-- `amd64` and `aarch64` Docker images (uses upstream GHCR image)
-- All original CLI parameters and environment variables
-
-See the [original README](https://github.com/OHF-Voice/linux-voice-assistant) and [docs/install.md](docs/install.md) for full upstream documentation.
-
----
-
-## Parameter reference
-
-| Parameter | Env variable | Default |
-|-----------|-------------|---------|
-| `--name` | `CLIENT_NAME` | Auto (`lva-MAC`) |
-| `--audio-input-device` | `AUDIO_INPUT_DEVICE` | Autodetected |
-| `--audio-output-device` | `AUDIO_OUTPUT_DEVICE` | `pipewire/lva-snapcast` |
-| `--wake-word-dir` | `WAKE_WORD_DIR` | `wakewords/custom/openWakeWord` |
-| `--wake-model` | `WAKE_MODEL` | `agent_smitt` |
-| `--host` | `HOST` | `0.0.0.0` |
-| `--network-interface` | `NETWORK_INTERFACE` | Autodetected |
-| `--port` | `PORT` | `6053` |
-| `--mic-volume` | `MIC_VOLUME` | `1.0` |
-| `--mic-auto-gain` | `MIC_AUTO_GAIN` | `0` |
-| `--mic-noise-suppression` | `MIC_NOISE_SUPPRESSION` | `0` |
-| `--debug` | `ENABLE_DEBUG=1` | off |
-
-Full list: see [docs/install_application.md](docs/install_application.md)
+| Problem | Cause | Fix |
+|---------|-------|-----|
+| No audio on any speaker | Stale pacat connection | `sudo systemctl restart lva-snapcast-stream` |
+| Audio on BT only, not others | Wrong AUDIO_OUTPUT_DEVICE | Check `AUDIO_OUTPUT_DEVICE=pipewire/lva-snapcast` in `.env` |
+| Container crash-loops | BT mic not ready at startup | `bt-reconnect-jbl` + entrypoint wait loop handle this automatically |
+| Wake word stops after minutes | WirePlumber switched BT HFP→A2DP | Run `system/install.sh` to lock HFP profile |
+| Bluetooth not connecting | No D-Bus policy | Run `system/install.sh` |
+| Changes to `.env` not applied | Used `docker compose restart` | Use `docker compose down && docker compose up -d` |
 
 ---
 
@@ -227,5 +190,5 @@ Full list: see [docs/install_application.md](docs/install_application.md)
 
 Apache 2.0 — same as upstream. See [LICENSE.md](LICENSE.md).
 
-Fork maintained by [@Guy008](https://github.com/Guy008).  
-Based on [OHF-Voice/linux-voice-assistant](https://github.com/OHF-Voice/linux-voice-assistant) by the [Open Home Foundation](https://www.openhomefoundation.org/).
+Fork by [@Guy008](https://github.com/Guy008) •
+Based on [OHF-Voice/linux-voice-assistant](https://github.com/OHF-Voice/linux-voice-assistant) by the [Open Home Foundation](https://www.openhomefoundation.org/)
