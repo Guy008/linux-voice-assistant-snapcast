@@ -1,0 +1,7 @@
+[Unit]
+Description=LVA Audio Pipeline Watchdog
+After=lva-snapcast-stream.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/lva-audio-watchdog.sh

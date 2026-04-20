@@ -1,0 +1,12 @@
+[Unit]
+Description=Auto-reconnect JBL Flip 4 Bluetooth
+After=bluetooth.service
+Requires=bluetooth.service
+
+[Service]
+ExecStart=/usr/local/bin/bt-reconnect-jbl.sh
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

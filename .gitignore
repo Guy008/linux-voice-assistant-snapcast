@@ -23,3 +23,9 @@ venv/
 .env
 version.txt
 version_githash.txt
+
+# Local notes / session files
+my-version-0.1.txt
+
+# Root-level tflite duplicates (models live in wakewords/)
+/*.tflite

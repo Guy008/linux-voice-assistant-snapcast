@@ -1,0 +1,19 @@
+[Unit]
+Description=LVA Audio Stream to Snapcast
+After=network.target snapserver.service
+
+[Service]
+# Replace with your username
+User=Guy008
+Environment=PULSE_SERVER=/run/user/1000/pulse/native
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+Restart=always
+RestartSec=3
+ExecStart=/bin/bash -c 'pacat --device=lva-snapcast.monitor --record --raw --rate=22050 --channels=1 --format=s16le --latency-msec=50 | \
+  ffmpeg -hide_banner -loglevel error \
+    -f s16le -ar 22050 -ac 1 -i pipe:0 \
+    -f s16le -ar 22050 -ac 1 \
+    tcp://192.168.1.30:2509?tcp_nodelay=1'
+
+[Install]
+WantedBy=multi-user.target

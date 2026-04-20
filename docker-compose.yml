@@ -48,6 +48,10 @@ services:
       # Time and zone
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
+      # Low-latency MPV config override (audio-buffer reduced from 0.8s to 0.3s)
+      - ./linux_voice_assistant/player/libmpv.py:/app/linux_voice_assistant/player/libmpv.py:ro
+      # Wait for BT mic before starting (prevents crash-loop when JBL not ready)
+      - ./docker-entrypoint.sh:/app/docker-entrypoint.sh:ro
       # Pulseaudio
       # /run/user/1000:/run/user/1000
       - ${LVA_XDG_RUNTIME_DIR:-/run/user/1000}:${LVA_XDG_RUNTIME_DIR:-/run/user/1000}

@@ -1,0 +1,12 @@
+[Unit]
+Description=Restart LVA Snapcast Stream when LVA container (re)starts
+After=docker.service lva-snapcast-stream.service
+Requires=docker.service
+
+[Service]
+ExecStart=/usr/local/bin/lva-snapcast-watcher.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

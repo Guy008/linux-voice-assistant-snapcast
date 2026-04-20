@@ -31,26 +31,18 @@ class LibMpvPlayer(AudioPlayer):
         self._mpv = mpv.MPV(
             audio_display=False,
             log_handler=self._on_mpv_log,
-            loglevel="error",
+            loglevel="info",
         )
 
         if device:
             self._mpv["audio-device"] = device
 
-        # Pre-buffer audio before the sink starts clocking samples out.
-        # The default (0.2 s) is too tight for short notification sounds on
-        # PulseAudio/PipeWire: the sink stream takes a few ms to initialise
-        # and the very first samples are dropped before it is ready, making
-        # short files (<1 s) appear to start mid-way through.
-        # 0.8 s gives the output pipeline enough headroom without adding any
-        # noticeable latency for a user-facing notification sound.
-        self._mpv["audio-buffer"] = 0.8
-
-        # Keep the PulseAudio/PipeWire stream open between files by outputting
-        # silence when idle.  This eliminates the per-play sink re-initialisation
-        # penalty entirely, so back-to-back short sounds (wakeup → TTS, mute →
-        # unmute) never lose their first samples regardless of system load.
-        self._mpv["audio-stream-silence"] = True
+        # Audio buffer: keep small to minimise latency through the Snapcast
+        # pipeline. 0.3s is enough headroom for the PipeWire sink to initialise
+        # on each play without adding perceptible delay.
+        # (audio-stream-silence removed: it prevents PipeWire from routing the
+        # stream correctly to the target sink when using pipewire/ backend.)
+        self._mpv["audio-buffer"] = 0.3
 
         # Callback Handling
         self._done_callback: Optional[Callable[[], None]] = None
@@ -205,6 +197,8 @@ class LibMpvPlayer(AudioPlayer):
 
         Error and fatal messages transition the player into ERROR state.
         """
+        # Temporary: log all mpv messages to diagnose audio device issue
+        self._log.warning("MPV [%s/%s] %s", level, prefix, text.strip())
         if level in ("error", "fatal"):
             with self._state_lock:
                 self._set_state(PlayerState.ERROR)

@@ -135,6 +135,28 @@ for i in $(seq 1 $CP_MAX_RETRIES); do
 done
 
 
+### Wait for audio input device (e.g. Bluetooth mic)
+# Without this, LVA crashes with IndexError if the BT mic isn't ready yet,
+# causing Docker to tight-loop restart before BT has a chance to reconnect.
+if [ -n "$AUDIO_INPUT_DEVICE" ]; then
+  MIC_MAX_RETRIES=60
+  MIC_RETRY_DELAY=2
+  echo "Waiting for audio input device: $AUDIO_INPUT_DEVICE"
+  for i in $(seq 1 $MIC_MAX_RETRIES); do
+    if pactl list sources short 2>/dev/null | grep -q "$AUDIO_INPUT_DEVICE"; then
+      echo "✅ Audio input device ready"
+      break
+    fi
+    if [ $i -eq $MIC_MAX_RETRIES ]; then
+      echo "❌ Audio input device not found after $((MIC_MAX_RETRIES * MIC_RETRY_DELAY))s — retrying container"
+      exit 3
+    fi
+    echo "⏳ Waiting for $AUDIO_INPUT_DEVICE... ($i/$MIC_MAX_RETRIES)"
+    sleep $MIC_RETRY_DELAY
+  done
+fi
+
+
 ### Start application
 if [ "$LIST_DEVICES" = "1" ]; then
   echo "list input devices"
