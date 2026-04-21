@@ -102,7 +102,7 @@ docker compose up -d
 ### כללים חשובים (נלמדו בדרך הקשה)
 
 - **אל תחזיר `audio-stream-silence`** — יוצר PipeWire node שלא מנותב ל-lva-snapcast
-- **אל תורד Snapcast buffer מתחת ל-500ms** — רמקולי WiFi יתחילו לגמגם
+- **אל תורד Snapcast buffer מתחת ל-1000ms** — חלק מרמקולי ה-WiFi לא עובדים מתחת לשנייה
 - **השתמש תמיד ב-`docker compose down && up -d`** אחרי שינוי ב-`.env` או volumes
 - **`AUDIO_OUTPUT_DEVICE` חייב להתחיל ב-`pipewire/`** — בלי זה MPV נכשל בשקט
 
@@ -267,7 +267,7 @@ docker compose up -d
 ### Key rules (learned the hard way)
 
 - **Never re-add `audio-stream-silence`** — creates a PipeWire node that doesn't route to lva-snapcast
-- **Never set Snapcast buffer below 500ms** — WiFi clients will stutter
+- **Never set Snapcast buffer below 1000ms** — some WiFi speakers don't work reliably below 1 second
 - **Always use `docker compose down && up -d`** after changing `.env` or volume mounts
 - **`AUDIO_OUTPUT_DEVICE` must have `pipewire/` prefix** — without it MPV silently fails
 

@@ -255,10 +255,10 @@ source = tcp://0.0.0.0:2509?name=Agent_Smith&mode=server&sampleformat=22050:16:1
 **הפחת buffer** לצמצום latency (ב-`[stream]` section):
 
 ```ini
-buffer = 500
+buffer = 1000
 ```
 
-> **⚠️ אל תרד מתחת ל-500ms** — WiFi clients יתחילו לגמגם. 500ms הוא האיזון הנכון בין latency לאמינות.
+> **⚠️ אל תרד מתחת ל-1000ms** — חלק מרמקולי WiFi לא עובדים טוב מתחת לשנייה. 1000ms הוא המינימום הבטוח.
 
 **הסר/הערה** sources שאינם נחוצים (למשל AirMusic):
 
@@ -708,7 +708,7 @@ docker compose logs | grep -E "Available wake words|Loading wake model|Server st
 ## בדיקה מקצה לקצה
 
 1. אמור "Agent Smith"
-2. צליל ההשכמה אמור להגיע מכל הרמקולים דרך Snapcast (~500ms עיכוב — נורמלי)
+2. צליל ההשכמה אמור להגיע מכל הרמקולים דרך Snapcast (~1000ms עיכוב — נורמלי)
 3. שאל שאלה — התשובה תישמע בכל הבית
 
 ```sh
@@ -842,7 +842,7 @@ linux-voice-assistant (Docker, network=host, uid=1000)
   ffmpeg  →  TCP:2509 (tcp_nodelay=1)
                 │
                 ▼
-        Snapcast Server (buffer=500ms)
+        Snapcast Server (buffer=1000ms)
         stream: Agent_Smith, 22050:16:1
                 │
      ┌──────────┼──────────────┐
@@ -860,11 +860,11 @@ linux-voice-assistant (Docker, network=host, uid=1000)
 | `lva-audio-watchdog.timer` | כל 2 דקות: בודק חיבור ffmpeg לSnapcast |
 | `bt-reconnect-jbl` | כל 15 שניות: מנסה reconnect אם JBL מנותק |
 
-**עיכוב כולל צפוי:** ~600–800ms  
+**עיכוב כולל צפוי:** ~1100–1300ms  
 - pacat buffer: 50ms  
 - MPV audio-buffer: 300ms  
-- Snapcast buffer: 500ms  
-- (חלקי הbuffers חופפים, העיכוב בפועל ~500–700ms)
+- Snapcast buffer: 1000ms  
+- (חלקי הbuffers חופפים, העיכוב בפועל ~1000–1200ms)
 
 ---
 
@@ -877,7 +877,7 @@ linux-voice-assistant (Docker, network=host, uid=1000)
 | `~/.config/wireplumber/wireplumber.conf.d/52-jbl-headset-profile.conf` | נוצר | נעילת JBL על פרופיל HFP, ביטול autoswitch A2DP |
 | `~/.config/wireplumber/wireplumber.conf.d/53-lva-output-routing.conf` | נוצר | lva-snapcast כ-default PipeWire sink |
 | `~/.config/pipewire/pipewire.conf.d/99-lva-snapcast.conf` | נוצר | Virtual sink לLVA |
-| `/etc/snapserver.conf` | עודכן | הוספת TCP source:2509, buffer=500ms, הסרת AirMusic |
+| `/etc/snapserver.conf` | עודכן | הוספת TCP source:2509, buffer=1000ms, הסרת AirMusic |
 | `/etc/systemd/system/lva-snapcast-stream.service` | נוצר | Streaming pipeline לSnapcast |
 | `/usr/local/bin/lva-snapcast-watcher.sh` | נוצר | סקריפט watcher |
 | `/etc/systemd/system/lva-snapcast-watcher.service` | נוצר | מאזין לdocker events, מאתחל stream אחרי container restart |

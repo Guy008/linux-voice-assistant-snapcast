@@ -146,16 +146,20 @@ if [ -f "$SNAPSERVER_CONF" ]; then
         echo "      ✓ הוספת TCP source לsnapserver.conf"
     fi
 
-    # Set buffer to 500ms if higher
-    CURRENT_BUFFER=$(grep -E "^buffer\s*=" "$SNAPSERVER_CONF" | grep -o '[0-9]*' | head -1 || echo "1000")
-    if [ "${CURRENT_BUFFER:-1000}" -gt 500 ]; then
-        sed -i "s/^buffer\s*=.*/buffer = 500/" "$SNAPSERVER_CONF"
-        echo "      ✓ buffer → 500ms"
+    # Set buffer to 1000ms if not already set correctly
+    CURRENT_BUFFER=$(grep -E "^buffer\s*=" "$SNAPSERVER_CONF" | grep -o '[0-9]*' | head -1 || echo "0")
+    if [ "${CURRENT_BUFFER:-0}" -lt 1000 ]; then
+        if grep -qE "^buffer\s*=" "$SNAPSERVER_CONF"; then
+            sed -i "s/^buffer\s*=.*/buffer = 1000/" "$SNAPSERVER_CONF"
+        else
+            sed -i "/^\[stream\]/a buffer = 1000" "$SNAPSERVER_CONF"
+        fi
+        echo "      ✓ buffer → 1000ms"
     fi
 else
     echo "      ⚠️  $SNAPSERVER_CONF לא נמצא — הוסף ידנית:"
     echo "         $SNAP_SOURCE"
-    echo "         buffer = 500"
+    echo "         buffer = 1000"
 fi
 
 # ── 7. Linger (user services without login — headless) ───────────────────────

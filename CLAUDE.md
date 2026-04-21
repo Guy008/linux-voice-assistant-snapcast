@@ -143,7 +143,7 @@ print(f'{nz}/{n} samples non-zero ({100*nz/n:.1f}%)' if n else 'no data')
 ## דברים שלא לעשות
 
 - **לא להחזיר `audio-stream-silence`** — ראה הסבר למעלה
-- **לא להוריד Snapcast buffer מ-500ms** — WiFi clients גמגום
+- **לא להוריד Snapcast buffer מ-1000ms** — חלק מרמקולי WiFi לא עובדים מתחת לשנייה
 - **לא להשתמש ב-`docker compose restart`** אחרי שינוי volumes/env — חובה down+up
 - **לא לשנות את `lva-snapcast` ל-A2DP** — JBL חייב להישאר HFP למיק
 
